@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Cantilever.js</title>
+        <script data-main="build/input.js" src="vendor/require.js"></script>
+    </head>
+    <body>
+        <span><canvas id="canvas_out" width=500 height=500></canvas></span>
+        <span id="output"></span>
+        <table><tr>
+            <td><div id="members_in">
+                <h3>Member input</h3>
+            </div><br/>
+            <button id="new_member">Add new member</button></td>
+            <td style="width:10px"></td>
+            <td><div id="joints_in">
+                <h3>Joint input</h3>
+            </div><br/>
+            <button id="new_joint">Add new joint</button></td>
+        </tr></table>
+    </body>
+    <style>
+        .error_out {
+            color:red;
+        }
+        .warning_out {
+            color:orange;
+        }
+        .compression_out {
+            color: blue;
+        }
+        .tension_out {
+            color: green;
+        }
+    </style>
+</html>

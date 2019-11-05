@@ -1,0 +1,19 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "lib": ["es2017", "dom"],
+        "target": "es5",
+        "module": "amd",
+        "strict": true,
+        "experimentalDecorators": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedParameters": true,
+        "removeComments": true,
+        "allowJs": true,
+        "outDir": "./build/"
+    },
+    "include": [
+        "src/*"
+    ],
+}
