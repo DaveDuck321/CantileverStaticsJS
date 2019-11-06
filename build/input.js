@@ -110,7 +110,7 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
             this.fixedInput.onchange = function (ev) { return (_this.updateFixed(ev, _this)); };
             this.jointSpan.append("Name: ");
             this.jointSpan.appendChild(this.nameInput);
-            this.jointSpan.append(" Position(x, y): ");
+            this.jointSpan.append(" Position (x, y) in mm: ");
             this.jointSpan.appendChild(this.positionInput);
             this.jointSpan.append(" Force(x, y): ");
             this.jointSpan.appendChild(this.forceInput);
@@ -195,11 +195,11 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
     function initialCantilever() {
         var jointsIn = document.getElementById("joints_in");
         var membersIn = document.getElementById("members_in");
-        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [2, 2], 0, true));
-        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [2, 4], 0, true));
-        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [4, 2]));
-        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [4, 4]));
-        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [6, 2], -100));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [0, 0], 0, true));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [0, 255], 0, true));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [407.5, 0]));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [407.5, 255]));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount, [815, 0], -2700));
         memberInputs.push(new MemberInput(membersIn, "a", jointInputs[0].id, jointInputs[2].id));
         memberInputs.push(new MemberInput(membersIn, "b", jointInputs[1].id, jointInputs[2].id));
         memberInputs.push(new MemberInput(membersIn, "c", jointInputs[1].id, jointInputs[3].id));
@@ -224,7 +224,7 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
         AddCell(row, "ID");
         AddCell(row, "Size (mm)");
         AddCell(row, "Thickness (mm)");
-        AddCell(row, "Mass/length (g/m)");
+        AddCell(row, "Mass/length (g/mm)");
         memberTable.append(row);
         var count = 0;
         for (var _i = 0, BEAMS_1 = analyse_1.BEAMS; _i < BEAMS_1.length; _i++) {

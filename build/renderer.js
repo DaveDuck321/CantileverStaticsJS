@@ -1,6 +1,9 @@
 define(["require", "exports", "./vecMaths"], function (require, exports, vecMaths_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    function Round(n, points) {
+        return Math.round(n * (Math.pow(10, points))) / (Math.pow(10, points));
+    }
     function Scale2Viewport(min, max, dimsPx) {
         var _a = [max[0] - min[0], max[1] - min[1]], rangeX = _a[0], rangeY = _a[1];
         var maxRange = Math.max(rangeX, rangeY) * 1.3;
@@ -13,7 +16,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
     }
     function DrawScene(context, dimsPx, results) {
         var outElement = document.getElementById("output");
-        outElement.innerHTML = "Mass: " + Math.round(results.mass * 10) / 10 + " g";
+        outElement.innerHTML = "Mass: " + Round(results.mass, 1) + " g";
         context.font = "12px Arial";
         context.fillStyle = 'white';
         context.fillRect(0, 0, dimsPx[0], dimsPx[1]);
@@ -36,6 +39,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             var member = _g[_f];
             context.fillStyle = 'white';
             context.strokeStyle = "rgb(" + Math.abs(member.tension / maxTension * 255) + ", 0, 0)";
+            context.lineWidth = member.beamType.id + 1;
             var startPos = scale(results.joints[member.startId].position);
             var endPos = scale(results.joints[member.endId].position);
             context.beginPath();
@@ -48,18 +52,19 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             var memberOut = document.createElement("DIV");
             if (member.tension > 0) {
                 memberOut.classList.add("tension_out");
-                memberOut.innerHTML = member.name + ": Tension " + member.tension;
+                memberOut.innerHTML = member.name + ": Tension " + Round(member.tension / 1000, 1) + " kN";
             }
             else if (member.buckles) {
                 memberOut.classList.add("buckles_out");
-                memberOut.innerHTML = member.name + ": Compression " + member.tension + " Buckes at force!";
+                memberOut.innerHTML = member.name + ": Buckles under " + Round(member.tension, 1) + " kN compression";
             }
             else {
                 memberOut.classList.add("compression_out");
-                memberOut.innerHTML = member.name + ": Compression " + member.tension;
+                memberOut.innerHTML = member.name + ": Compression " + Round(member.tension, 1) + " kN";
             }
             outElement.appendChild(memberOut);
         }
+        context.lineWidth = 1;
         context.strokeStyle = 'black';
         context.textBaseline = "middle";
         context.textAlign = "center";

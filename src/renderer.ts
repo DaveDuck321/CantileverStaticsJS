@@ -2,6 +2,10 @@ import { JointInput, MemberInput } from "./input";
 import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize} from "./vecMaths";
 import { SimulationOut } from "./analyse";
 
+function Round(n:number, points:number) {
+    return Math.round(n*(10**points))/(10**points);
+}
+
 function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
     let [rangeX, rangeY] = [max[0] - min[0], max[1] - min[1]];
     let maxRange = Math.max(rangeX, rangeY)*1.3;
@@ -16,7 +20,7 @@ function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
 
 export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results:SimulationOut) {
     const outElement = <HTMLLIElement>document.getElementById("output");
-    outElement.innerHTML = `Mass: ${Math.round(results.mass*10)/10} g`;
+    outElement.innerHTML = `Mass: ${Round(results.mass, 1)} g`;
 
     context.font = "12px Arial";
     context.fillStyle = 'white';
@@ -39,6 +43,7 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     for(let member of results.members) {
         context.fillStyle = 'white';
         context.strokeStyle = `rgb(${Math.abs(member.tension/maxTension * 255)}, 0, 0)`;
+        context.lineWidth = member.beamType.id + 1;
         const startPos = scale(results.joints[member.startId].position);
         const endPos = scale(results.joints[member.endId].position);
         context.beginPath();
@@ -53,16 +58,17 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         let memberOut = document.createElement("DIV");
         if(member.tension > 0) {
             memberOut.classList.add("tension_out");
-            memberOut.innerHTML = `${member.name}: Tension ${member.tension}`;
+            memberOut.innerHTML = `${member.name}: Tension ${Round(member.tension/1000, 1)} kN`;
         } else if(member.buckles) {
             memberOut.classList.add("buckles_out");
-            memberOut.innerHTML = `${member.name}: Compression ${member.tension} Buckes at force!`;
+            memberOut.innerHTML = `${member.name}: Buckles under ${Round(member.tension, 1)} kN compression`;
         } else {
             memberOut.classList.add("compression_out");
-            memberOut.innerHTML = `${member.name}: Compression ${member.tension}`;
+            memberOut.innerHTML = `${member.name}: Compression ${Round(member.tension, 1)} kN`;
         }
         outElement.appendChild(memberOut);
     }
+    context.lineWidth = 1;
     context.strokeStyle = 'black';
     context.textBaseline = "middle";
     context.textAlign = "center";

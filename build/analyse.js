@@ -3,12 +3,12 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
     Object.defineProperty(exports, "__esModule", { value: true });
     var HOLE_D = 3.2;
     exports.BEAMS = [
-        { size: 9.5, thickness: 0.7, massPerLength: 104 },
-        { size: 12.5, thickness: 0.7, massPerLength: 137 },
-        { size: 12.5, thickness: 0.9, massPerLength: 176 },
-        { size: 16, thickness: 0.9, massPerLength: 226 },
-        { size: 16, thickness: 1.1, massPerLength: 276 },
-        { size: 19, thickness: 1.1, massPerLength: 328 },
+        { id: 0, size: 9.5, thickness: 0.7, massPerLength: 0.104 },
+        { id: 1, size: 12.5, thickness: 0.7, massPerLength: 0.137 },
+        { id: 2, size: 12.5, thickness: 0.9, massPerLength: 0.176 },
+        { id: 3, size: 16, thickness: 0.9, massPerLength: 0.226 },
+        { id: 4, size: 16, thickness: 1.1, massPerLength: 0.276 },
+        { id: 5, size: 19, thickness: 1.1, massPerLength: 0.328 },
     ];
     var BUCKLE_A = {
         scale: 0.4714,
