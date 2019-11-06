@@ -6,6 +6,8 @@ export interface SimulationOut {
     joints:JointsObject;
     warnings:string[];
     errors:string[];
+
+    mass:number;
 }
 
 interface MemberInfo {
@@ -13,6 +15,7 @@ interface MemberInfo {
 
     tensionKnown: boolean,
     tension: number,
+    buckles: boolean,
     direction: vec2,
 
     startId:number,
@@ -84,17 +87,18 @@ const BUCKLE_A:BuckleGraph = {
     ],
 };
 
-function effectiveArea(beam: Beam) {
+function GetEffectiveArea(beam: Beam) {
     return ((3*beam.size*beam.thickness)/2 - HOLE_D) * 0.9;
 }
 
-function buckleStress(lengthPerB:number, type:BuckleGraph = BUCKLE_A):number {
-    let measureAt = Math.min(Math.max(lengthPerB/type.scale, type.range[0]), type.range[1]);
-    let point = type.constant;
+function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
+    const lengthPerB = member.length/member.beamType.thickness;
+    let graphX = Math.min(Math.max(lengthPerB/type.scale, type.range[0]), type.range[1]);
+    let stress = type.constant;
     for(let i=0; i<type.powers.length; i++) {
-        point += type.coefficients[i] * Math.pow(measureAt, type.powers[i]);
+        stress += type.coefficients[i] * Math.pow(graphX, type.powers[i]);
     }
-    return point;
+    return stress;
 }
 
 function SumForces(joint: JointInfo): {forceIn:vec2, unknowns:MemberInfo[], directions:number[]} {
@@ -119,8 +123,6 @@ function SumForces(joint: JointInfo): {forceIn:vec2, unknowns:MemberInfo[], dire
         const force = ScaleVector(member.direction, member.tension);
         forceIn = AddVectors(forceIn, force);
     }
-    console.log(joint);
-    console.log(forceIn);
     return {forceIn:forceIn, unknowns:unknowns, directions:directions};
 }
 
@@ -170,12 +172,35 @@ function SolveNextJoint(joints: JointsObject):string[] {
     return [];
 }
 
+function GetBucklingData(allMembers:MemberInfo[]) {
+    for(let member of allMembers) {
+        if(member.tension > 0) continue;
+
+        const area = GetEffectiveArea(member.beamType);
+        const stress = Math.abs(member.tension/area);
+        const buckleStress = GetBuckleStress(member, BUCKLE_A);
+
+        if(stress > buckleStress) {
+            member.buckles = true;
+        }
+    }
+}
+
+function MemberMass(allMembers:MemberInfo[]) {
+    let total = 0;
+    for(let member of allMembers) {
+        total += member.beamType.massPerLength * member.length;
+    }
+    return total;
+}
+
 export function RunSimulation(joints:JointInput[], members:MemberInput[]):SimulationOut {
     let results:SimulationOut = {
         members:[],
         joints:[],
         warnings:[],
         errors:[],
+        mass:0,
     }
     let allJoints:JointsObject = {};
     let allMembers:MemberInfo[] = [];
@@ -205,6 +230,7 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
         const memberInfo:MemberInfo = {
             name: member.name,
             tensionKnown: false,
+            buckles: false,
             tension: 0,
             direction: directionNorm,
 
@@ -214,7 +240,6 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             length: Magnitude(direction),
             beamType: BEAMS[member.type],
         };
-        console.log(member.type);
         allJoints[member.start].membersOut.push(memberInfo);
         allJoints[member.end].membersIn.push(memberInfo);
         allMembers.push(memberInfo);
@@ -223,6 +248,8 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     results.members = allMembers;
 
     results.errors.push(...SolveNextJoint(results.joints));
+    results.mass = MemberMass(allMembers);
+    GetBucklingData(allMembers);
 
     return results;
 }

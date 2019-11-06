@@ -16,7 +16,8 @@ function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
 
 export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results:SimulationOut) {
     const outElement = <HTMLLIElement>document.getElementById("output");
-    outElement.innerHTML = "";
+    outElement.innerHTML = `Mass: ${Math.round(results.mass*10)/10} g`;
+
     context.font = "12px Arial";
     context.fillStyle = 'white';
     context.fillRect(0, 0, dimsPx[0], dimsPx[1])
@@ -53,6 +54,9 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         if(member.tension > 0) {
             memberOut.classList.add("tension_out");
             memberOut.innerHTML = `${member.name}: Tension ${member.tension}`;
+        } else if(member.buckles) {
+            memberOut.classList.add("buckles_out");
+            memberOut.innerHTML = `${member.name}: Compression ${member.tension} Buckes at force!`;
         } else {
             memberOut.classList.add("compression_out");
             memberOut.innerHTML = `${member.name}: Compression ${member.tension}`;

@@ -1,10 +1,3 @@
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 define(["require", "exports", "./vecMaths"], function (require, exports, vecMaths_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -38,17 +31,18 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             -214.963,
         ],
     };
-    function effectiveArea(beam) {
+    function GetEffectiveArea(beam) {
         return ((3 * beam.size * beam.thickness) / 2 - HOLE_D) * 0.9;
     }
-    function buckleStress(lengthPerB, type) {
+    function GetBuckleStress(member, type) {
         if (type === void 0) { type = BUCKLE_A; }
-        var measureAt = Math.min(Math.max(lengthPerB / type.scale, type.range[0]), type.range[1]);
-        var point = type.constant;
+        var lengthPerB = member.length / member.beamType.thickness;
+        var graphX = Math.min(Math.max(lengthPerB / type.scale, type.range[0]), type.range[1]);
+        var stress = type.constant;
         for (var i = 0; i < type.powers.length; i++) {
-            point += type.coefficients[i] * Math.pow(measureAt, type.powers[i]);
+            stress += type.coefficients[i] * Math.pow(graphX, type.powers[i]);
         }
-        return point;
+        return stress;
     }
     function SumForces(joint) {
         var forceIn = [joint.force[0], joint.force[1]];
@@ -94,7 +88,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
                 continue;
             var knownCount = vecMaths_1.Magnitude(joint.force) == 0 ? 0 : 1;
             var unknownCount = 0;
-            var allMembers = __spreadArrays(joint.membersIn);
+            var allMembers = joint.membersIn.slice();
             allMembers.push.apply(allMembers, joint.membersOut);
             for (var _b = 0, allMembers_1 = allMembers; _b < allMembers_1.length; _b++) {
                 var member = allMembers_1[_b];
@@ -122,6 +116,27 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
         }
         return [];
     }
+    function GetBucklingData(allMembers) {
+        for (var _i = 0, allMembers_2 = allMembers; _i < allMembers_2.length; _i++) {
+            var member = allMembers_2[_i];
+            if (member.tension > 0)
+                continue;
+            var area = GetEffectiveArea(member.beamType);
+            var stress = Math.abs(member.tension / area);
+            var buckleStress = GetBuckleStress(member, BUCKLE_A);
+            if (stress > buckleStress) {
+                member.buckles = true;
+            }
+        }
+    }
+    function MemberMass(allMembers) {
+        var total = 0;
+        for (var _i = 0, allMembers_3 = allMembers; _i < allMembers_3.length; _i++) {
+            var member = allMembers_3[_i];
+            total += member.beamType.massPerLength * member.length;
+        }
+        return total;
+    }
     function RunSimulation(joints, members) {
         var _a;
         var results = {
@@ -129,6 +144,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             joints: [],
             warnings: [],
             errors: [],
+            mass: 0,
         };
         var allJoints = {};
         var allMembers = [];
@@ -156,6 +172,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             var memberInfo = {
                 name: member.name,
                 tensionKnown: false,
+                buckles: false,
                 tension: 0,
                 direction: directionNorm,
                 startId: member.start,
@@ -163,7 +180,6 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
                 length: vecMaths_1.Magnitude(direction),
                 beamType: exports.BEAMS[member.type],
             };
-            console.log(member.type);
             allJoints[member.start].membersOut.push(memberInfo);
             allJoints[member.end].membersIn.push(memberInfo);
             allMembers.push(memberInfo);
@@ -171,6 +187,8 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
         results.joints = allJoints;
         results.members = allMembers;
         (_a = results.errors).push.apply(_a, SolveNextJoint(results.joints));
+        results.mass = MemberMass(allMembers);
+        GetBucklingData(allMembers);
         return results;
     }
     exports.RunSimulation = RunSimulation;
