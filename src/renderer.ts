@@ -61,10 +61,10 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
             memberOut.innerHTML = `${member.name}: Tension ${Round(member.tension/1000, 1)} kN`;
         } else if(member.buckles) {
             memberOut.classList.add("buckles_out");
-            memberOut.innerHTML = `${member.name}: Buckles under ${Round(member.tension, 1)} kN compression`;
+            memberOut.innerHTML = `${member.name}: Buckles under ${Round(member.tension/1000, 1)} kN compression`;
         } else {
             memberOut.classList.add("compression_out");
-            memberOut.innerHTML = `${member.name}: Compression ${Round(member.tension, 1)} kN`;
+            memberOut.innerHTML = `${member.name}: Compression ${Round(member.tension/1000, 1)} kN`;
         }
         outElement.appendChild(memberOut);
     }

@@ -44,7 +44,6 @@ interface BuckleGraph {
     scale:number,
     constant:number,
     range:vec2,
-    powers:number[],
     coefficients:number[],
 }
 
@@ -68,23 +67,17 @@ export const BEAMS:Beam[] = [
 
 const BUCKLE_A:BuckleGraph = {
     scale: 0.4714,
-    constant: 217.878,
-    range: [14.16, 127.28],
-    powers: [
-        3.10697,
-        -500,
-        -2.59809,
-        3.12095,
-        3.0868,
-        3.08013,
-    ],
+    constant: -449,
+    range: [14.4, 127.28],
     coefficients: [
-        -180.56,
-        -0.0081,
-        13360.1,
-        65.2226,
-        330.267,
-        -214.963,
+        43.7698,
+        -3.27768,
+        0.11777,
+        -0.002437,
+        0.0000302,
+        -2.2165e-7,
+        8.8383e-10,
+        -1.4779e-12,
     ],
 };
 
@@ -93,11 +86,11 @@ function GetEffectiveArea(beam: Beam) {
 }
 
 function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
-    const lengthPerB = member.length/member.beamType.thickness;
+    const lengthPerB = member.length/member.beamType.size;
     let graphX = Math.min(Math.max(lengthPerB/type.scale, type.range[0]), type.range[1]);
     let stress = type.constant;
-    for(let i=0; i<type.powers.length; i++) {
-        stress += type.coefficients[i] * Math.pow(graphX, type.powers[i]);
+    for(let i=0; i<type.coefficients.length; i++) {
+        stress += type.coefficients[i] * Math.pow(graphX, i);
     }
     return stress;
 }
@@ -180,8 +173,8 @@ function GetBucklingData(allMembers:MemberInfo[]) {
         const area = GetEffectiveArea(member.beamType);
         const stress = Math.abs(member.tension/area);
         const buckleStress = GetBuckleStress(member, BUCKLE_A);
-
         if(stress > buckleStress) {
+            console.log({buckleStress:buckleStress, stress:stress});
             member.buckles = true;
         }
     }
