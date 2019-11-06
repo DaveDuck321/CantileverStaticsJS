@@ -12,20 +12,29 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
             this.name = name;
             this.start = start;
             this.end = end;
+            this.type = 0;
             this.memberSpan = document.createElement("DIV");
             this.nameInput = document.createElement("INPUT");
             this.nameInput.value = name;
             this.nameInput.onchange = function (ev) { _this.updateName(ev, _this); };
             this.startSelectElement = document.createElement("SELECT");
             this.endSelectElement = document.createElement("SELECT");
+            this.typeSelectElement = document.createElement("SELECT");
+            for (var i = 0; i < analyse_1.BEAMS.length; i++) {
+                var option = new Option("" + i, "" + i);
+                this.typeSelectElement.options.add(option);
+            }
             this.startSelectElement.onchange = function () { _this.updateStart(_this); };
             this.endSelectElement.onchange = function () { _this.updateEnd(_this); };
+            this.typeSelectElement.onchange = function () { _this.updateType(_this); };
             this.memberSpan.append("Name: ");
             this.memberSpan.appendChild(this.nameInput);
             this.memberSpan.append(" Starts at: ");
             this.memberSpan.appendChild(this.startSelectElement);
             this.memberSpan.append(" Ends at: ");
             this.memberSpan.appendChild(this.endSelectElement);
+            this.memberSpan.append(" Type: ");
+            this.memberSpan.appendChild(this.typeSelectElement);
             membersIn.appendChild(this.memberSpan);
             this.updateAllOptions();
         }
@@ -37,6 +46,11 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
         MemberInput.prototype.updateEnd = function (obj) {
             var selected = obj.endSelectElement.selectedOptions[0];
             obj.end = parseInt(selected.value);
+            DrawChanges();
+        };
+        MemberInput.prototype.updateType = function (obj) {
+            var selected = obj.typeSelectElement.selectedOptions[0];
+            obj.type = parseInt(selected.value);
             DrawChanges();
         };
         MemberInput.prototype.updateAllOptions = function () {
@@ -199,9 +213,34 @@ define(["require", "exports", "./renderer", "./analyse"], function (require, exp
         var results = analyse_1.RunSimulation(jointInputs, memberInputs);
         renderer_1.DrawScene(context, [canvas.width, canvas.height], results);
     }
+    function AddCell(row, text) {
+        var cell = document.createElement("TD");
+        cell.append(text);
+        row.appendChild(cell);
+    }
+    function PopulateMemberTable() {
+        var memberTable = document.getElementById("member_info");
+        var row = document.createElement("TR");
+        AddCell(row, "ID");
+        AddCell(row, "Size (mm)");
+        AddCell(row, "Thickness (mm)");
+        AddCell(row, "Mass/length (g/m)");
+        memberTable.append(row);
+        var count = 0;
+        for (var _i = 0, BEAMS_1 = analyse_1.BEAMS; _i < BEAMS_1.length; _i++) {
+            var member = BEAMS_1[_i];
+            var row_1 = document.createElement("TR");
+            AddCell(row_1, count++);
+            AddCell(row_1, member.size);
+            AddCell(row_1, member.thickness);
+            AddCell(row_1, member.massPerLength);
+            memberTable.append(row_1);
+        }
+    }
     window.onload = function () {
         console.log("Starting script");
         clearTimeout(timeout);
+        PopulateMemberTable();
         var addMemberBtn = document.getElementById("new_member");
         var addJointBtn = document.getElementById("new_joint");
         addMemberBtn.onclick = addNewMember;

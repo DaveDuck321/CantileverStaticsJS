@@ -8,6 +8,15 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 define(["require", "exports", "./vecMaths"], function (require, exports, vecMaths_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    var HOLE_D = 3.2;
+    exports.BEAMS = [
+        { size: 9.5, thickness: 0.7, massPerLength: 104 },
+        { size: 12.5, thickness: 0.7, massPerLength: 137 },
+        { size: 12.5, thickness: 0.9, massPerLength: 176 },
+        { size: 16, thickness: 0.9, massPerLength: 226 },
+        { size: 16, thickness: 1.1, massPerLength: 276 },
+        { size: 19, thickness: 1.1, massPerLength: 328 },
+    ];
     var BUCKLE_A = {
         scale: 0.4714,
         constant: 217.878,
@@ -29,6 +38,9 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             -214.963,
         ],
     };
+    function effectiveArea(beam) {
+        return ((3 * beam.size * beam.thickness) / 2 - HOLE_D) * 0.9;
+    }
     function buckleStress(lengthPerB, type) {
         if (type === void 0) { type = BUCKLE_A; }
         var measureAt = Math.min(Math.max(lengthPerB / type.scale, type.range[0]), type.range[1]);
@@ -62,8 +74,6 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
             var force = vecMaths_1.ScaleVector(member.direction, member.tension);
             forceIn = vecMaths_1.AddVectors(forceIn, force);
         }
-        console.log(joint);
-        console.log(forceIn);
         return { forceIn: forceIn, unknowns: unknowns, directions: directions };
     }
     function SolveFreeJoint(joint) {
@@ -151,9 +161,9 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
                 startId: member.start,
                 endId: member.end,
                 length: vecMaths_1.Magnitude(direction),
-                size: 16,
-                thickness: 1.6,
+                beamType: exports.BEAMS[member.type],
             };
+            console.log(member.type);
             allJoints[member.start].membersOut.push(memberInfo);
             allJoints[member.end].membersIn.push(memberInfo);
             allMembers.push(memberInfo);
@@ -161,7 +171,6 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
         results.joints = allJoints;
         results.members = allMembers;
         (_a = results.errors).push.apply(_a, SolveNextJoint(results.joints));
-        console.log(results.members);
         return results;
     }
     exports.RunSimulation = RunSimulation;

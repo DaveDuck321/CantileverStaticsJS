@@ -9,18 +9,17 @@ export interface SimulationOut {
 }
 
 interface MemberInfo {
-    name: string;
+    name: string,
 
-    tensionKnown: boolean;
-    tension: number;
-    direction: vec2;
+    tensionKnown: boolean,
+    tension: number,
+    direction: vec2,
 
-    startId:number;
-    endId:number;
+    startId:number,
+    endId:number,
 
-    length: number;
-    size: number;
-    thickness: number;
+    length: number,
+    beamType: Beam,
 }
 
 interface JointInfo {
@@ -46,6 +45,23 @@ interface BuckleGraph {
     coefficients:number[],
 }
 
+interface Beam {
+    size: number,
+    thickness: number,
+    massPerLength: number,
+}
+
+const HOLE_D = 3.2;
+
+export const BEAMS:Beam[] = [
+    {size: 9.5, thickness: 0.7, massPerLength: 104},
+    {size: 12.5, thickness: 0.7, massPerLength: 137},
+    {size: 12.5, thickness: 0.9, massPerLength: 176},
+    {size: 16, thickness: 0.9, massPerLength: 226},
+    {size: 16, thickness: 1.1, massPerLength: 276},
+    {size: 19, thickness: 1.1, massPerLength: 328},
+];
+
 const BUCKLE_A:BuckleGraph = {
     scale: 0.4714,
     constant: 217.878,
@@ -67,6 +83,10 @@ const BUCKLE_A:BuckleGraph = {
         -214.963,
     ],
 };
+
+function effectiveArea(beam: Beam) {
+    return ((3*beam.size*beam.thickness)/2 - HOLE_D) * 0.9;
+}
 
 function buckleStress(lengthPerB:number, type:BuckleGraph = BUCKLE_A):number {
     let measureAt = Math.min(Math.max(lengthPerB/type.scale, type.range[0]), type.range[1]);
@@ -192,9 +212,9 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             endId: member.end,
 
             length: Magnitude(direction),
-            size: 16,
-            thickness: 1.6,
+            beamType: BEAMS[member.type],
         };
+        console.log(member.type);
         allJoints[member.start].membersOut.push(memberInfo);
         allJoints[member.end].membersIn.push(memberInfo);
         allMembers.push(memberInfo);
@@ -203,7 +223,6 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     results.members = allMembers;
 
     results.errors.push(...SolveNextJoint(results.joints));
-    console.log(results.members);
 
     return results;
 }

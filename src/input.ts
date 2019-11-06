@@ -1,6 +1,6 @@
 import { DrawScene } from "./renderer";
 import {vec2, Magnitude} from "./vecMaths";
-import { RunSimulation } from "./analyse";
+import { RunSimulation, BEAMS } from "./analyse";
 
 let jointCount = 0;
 let memberCount = 0;
@@ -13,9 +13,11 @@ export class MemberInput {
 
     start: number;
     end: number;
+    type: number;
 
     memberSpan: HTMLElement;
     nameInput: HTMLInputElement;
+    typeSelectElement: HTMLSelectElement;
     startSelectElement: HTMLSelectElement;
     endSelectElement: HTMLSelectElement;
 
@@ -25,6 +27,7 @@ export class MemberInput {
 
         this.start = start;
         this.end = end;
+        this.type = 0;
 
         this.memberSpan = <HTMLElement>document.createElement("DIV");
         this.nameInput = <HTMLInputElement>document.createElement("INPUT");
@@ -34,9 +37,15 @@ export class MemberInput {
 
         this.startSelectElement = <HTMLSelectElement>document.createElement("SELECT");
         this.endSelectElement = <HTMLSelectElement>document.createElement("SELECT");
+        this.typeSelectElement = <HTMLSelectElement>document.createElement("SELECT");
+        for(let i=0; i<BEAMS.length; i++) {
+            const option = new Option(""+i, ""+i);
+            this.typeSelectElement.options.add(option);
+        }
 
         this.startSelectElement.onchange = ()=>{this.updateStart(this)};
         this.endSelectElement.onchange = ()=>{this.updateEnd(this)};
+        this.typeSelectElement.onchange = ()=>{this.updateType(this)};
 
         this.memberSpan.append("Name: ");
         this.memberSpan.appendChild(this.nameInput);
@@ -44,6 +53,8 @@ export class MemberInput {
         this.memberSpan.appendChild(this.startSelectElement);
         this.memberSpan.append(" Ends at: ");
         this.memberSpan.appendChild(this.endSelectElement);
+        this.memberSpan.append(" Type: ");
+        this.memberSpan.appendChild(this.typeSelectElement);
 
         membersIn.appendChild(this.memberSpan);
         this.updateAllOptions();
@@ -56,6 +67,11 @@ export class MemberInput {
     updateEnd(obj:MemberInput) {
         const selected = obj.endSelectElement.selectedOptions[0];
         obj.end = parseInt(selected.value);
+        DrawChanges();
+    }
+    updateType(obj:MemberInput) {
+        const selected = obj.typeSelectElement.selectedOptions[0];
+        obj.type = parseInt(selected.value);
         DrawChanges();
     }
 
@@ -230,9 +246,38 @@ function DrawChanges() {
     DrawScene(context, [canvas.width, canvas.height], results);
 }
 
+function AddCell(row:HTMLElement, text:string|number) {
+    let cell = document.createElement("TD");
+    cell.append(<string>text);
+    row.appendChild(cell);
+}
+
+function PopulateMemberTable() {
+    const memberTable = <HTMLElement>document.getElementById("member_info");
+
+    let row = document.createElement("TR");
+    AddCell(row, "ID");
+    AddCell(row, "Size (mm)");
+    AddCell(row, "Thickness (mm)");
+    AddCell(row, "Mass/length (g/m)");
+
+    memberTable.append(row);
+    let count = 0;
+    for(let member of BEAMS) {
+        let row = document.createElement("TR");
+        AddCell(row, count++);
+        AddCell(row, member.size);
+        AddCell(row, member.thickness);
+        AddCell(row, member.massPerLength);
+
+        memberTable.append(row);
+    }
+}
+
 window.onload = ()=>{
     console.log("Starting script");
     clearTimeout(timeout);
+    PopulateMemberTable();
     const addMemberBtn = <HTMLButtonElement>document.getElementById("new_member");
     const addJointBtn = <HTMLButtonElement>document.getElementById("new_joint");
     addMemberBtn.onclick = addNewMember;
