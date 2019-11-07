@@ -42,7 +42,6 @@ interface JointsObject {
 
 interface BuckleGraph {
     scale:number,
-    constant:number,
     range:vec2,
     coefficients:number[],
 }
@@ -66,18 +65,15 @@ export const BEAMS:Beam[] = [
 ];
 
 const BUCKLE_A:BuckleGraph = {
-    scale: 0.4714,
-    constant: -449,
-    range: [14.4, 127.28],
+    scale: 1.938,
+    range: [12.2, 116.3],
     coefficients: [
-        43.7698,
-        -3.27768,
-        0.11777,
-        -0.002437,
-        0.0000302,
-        -2.2165e-7,
-        8.8383e-10,
-        -1.4779e-12,
+        232.506,
+        0,
+        -0.170192,
+        0.003336,
+        -0.0000254,
+        7.014e-8,
     ],
 };
 
@@ -87,8 +83,8 @@ function GetEffectiveArea(beam: Beam) {
 
 function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
     const lengthPerB = member.length/member.beamType.size;
-    let graphX = Math.min(Math.max(lengthPerB/type.scale, type.range[0]), type.range[1]);
-    let stress = type.constant;
+    let graphX = Math.min(Math.max(lengthPerB*type.scale, type.range[0]), type.range[1]);
+    let stress = 0;
     for(let i=0; i<type.coefficients.length; i++) {
         stress += type.coefficients[i] * Math.pow(graphX, i);
     }

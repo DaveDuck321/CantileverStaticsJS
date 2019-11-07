@@ -1,3 +1,10 @@
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 define(["require", "exports", "./vecMaths"], function (require, exports, vecMaths_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -11,18 +18,15 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
         { id: 5, size: 19, thickness: 1.1, massPerLength: 0.328 },
     ];
     var BUCKLE_A = {
-        scale: 0.4714,
-        constant: -449,
-        range: [14.4, 127.28],
+        scale: 1.938,
+        range: [12.2, 116.3],
         coefficients: [
-            43.7698,
-            -3.27768,
-            0.11777,
-            -0.002437,
-            0.0000302,
-            -2.2165e-7,
-            8.8383e-10,
-            -1.4779e-12,
+            232.506,
+            0,
+            -0.170192,
+            0.003336,
+            -0.0000254,
+            7.014e-8,
         ],
     };
     function GetEffectiveArea(beam) {
@@ -31,8 +35,8 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
     function GetBuckleStress(member, type) {
         if (type === void 0) { type = BUCKLE_A; }
         var lengthPerB = member.length / member.beamType.size;
-        var graphX = Math.min(Math.max(lengthPerB / type.scale, type.range[0]), type.range[1]);
-        var stress = type.constant;
+        var graphX = Math.min(Math.max(lengthPerB * type.scale, type.range[0]), type.range[1]);
+        var stress = 0;
         for (var i = 0; i < type.coefficients.length; i++) {
             stress += type.coefficients[i] * Math.pow(graphX, i);
         }
@@ -82,7 +86,7 @@ define(["require", "exports", "./vecMaths"], function (require, exports, vecMath
                 continue;
             var knownCount = vecMaths_1.Magnitude(joint.force) == 0 ? 0 : 1;
             var unknownCount = 0;
-            var allMembers = joint.membersIn.slice();
+            var allMembers = __spreadArrays(joint.membersIn);
             allMembers.push.apply(allMembers, joint.membersOut);
             for (var _b = 0, allMembers_1 = allMembers; _b < allMembers_1.length; _b++) {
                 var member = allMembers_1[_b];
