@@ -224,6 +224,7 @@ function initialCantilever() {
     const jointsIn = <HTMLElement>document.getElementById("joints_in");
     const membersIn = <HTMLElement>document.getElementById("members_in");
 
+    /*
     jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0 ,0], 0, true));
     jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0, 255], 0, true));
     jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [407.5, 0]));
@@ -236,6 +237,28 @@ function initialCantilever() {
     memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[2].id, jointInputs[3].id));
     memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[3].id, jointInputs[4].id));
     memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[2].id, jointInputs[4].id));
+    */
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0 ,0], 0, true));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 0]));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 0]));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [815, 0], -2700));
+
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0, 255], 0, true));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 255-85]));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 255-85*2]));
+
+   memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].id, jointInputs[1].id));
+   memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].id, jointInputs[2].id));
+   memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[2].id, jointInputs[3].id));
+
+   memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[4].id, jointInputs[5].id));
+   memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[5].id, jointInputs[6].id));
+   memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[6].id, jointInputs[3].id));
+
+   memberInputs.push(new MemberInput(membersIn, `g`, jointInputs[4].id, jointInputs[1].id));
+   memberInputs.push(new MemberInput(membersIn, `h`, jointInputs[5].id, jointInputs[1].id));
+   memberInputs.push(new MemberInput(membersIn, `i`, jointInputs[5].id, jointInputs[2].id));
+   memberInputs.push(new MemberInput(membersIn, `j`, jointInputs[6].id, jointInputs[2].id));
 }
 
 function DrawChanges() {
@@ -246,7 +269,7 @@ function DrawChanges() {
     DrawScene(context, [canvas.width, canvas.height], results);
 }
 
-function AddCell(row:HTMLElement, text:string|number) {
+export function AddCell(row:HTMLElement, text:string|number) {
     let cell = document.createElement("TD");
     cell.append(<string>text);
     row.appendChild(cell);

@@ -1,4 +1,4 @@
-import { JointInput, MemberInput } from "./input";
+import { JointInput, MemberInput, AddCell } from "./input";
 import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize} from "./vecMaths";
 import { SimulationOut } from "./analyse";
 
@@ -40,7 +40,9 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         maxY = Math.max(maxY, joint.position[1]);
     }
     let scale = Scale2Viewport([minX, minY], [maxX, maxY], dimsPx);
+    let table = document.createElement('TABLE');
     for(let member of results.members) {
+        const tension = member.tension*results.analyticalMult;
         context.fillStyle = 'white';
         context.strokeStyle = `rgb(${Math.abs(member.tension/maxTension * 255)}, 0, 0)`;
         context.lineWidth = member.beamType.id + 1;
@@ -55,19 +57,20 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         let centerPos = AddVectors(startPos, LinMultVectors(SubVectors(endPos, startPos), [0.5, 0.5]));
         context.fillText(member.name, centerPos[0], centerPos[1]);
 
-        let memberOut = document.createElement("DIV");
-        if(member.tension > 0) {
-            memberOut.classList.add("tension_out");
-            memberOut.innerHTML = `${member.name}: Tension ${Round(member.tension/1000, 1)} kN`;
-        } else if(member.buckles) {
-            memberOut.classList.add("buckles_out");
-            memberOut.innerHTML = `${member.name}: Buckles under ${Round(member.tension/1000, 1)} kN compression`;
+        let rowOut = document.createElement('TR');
+        AddCell(rowOut, member.name);
+        if(tension > 0) {
+            AddCell(rowOut, "Tension");
         } else {
-            memberOut.classList.add("compression_out");
-            memberOut.innerHTML = `${member.name}: Compression ${Round(member.tension/1000, 1)} kN`;
+            AddCell(rowOut, "Compression");
         }
-        outElement.appendChild(memberOut);
+        AddCell(rowOut, `${Round(tension/1000, 1)} kN`);
+        AddCell(rowOut, `${Round(member.failsAt/1000, 1)} kN`);
+        AddCell(rowOut, ""+member.fails);
+        table.appendChild(rowOut);
     }
+    outElement.appendChild(table);
+
     context.lineWidth = 1;
     context.strokeStyle = 'black';
     context.textBaseline = "middle";

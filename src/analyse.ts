@@ -8,6 +8,8 @@ export interface SimulationOut {
     errors:string[];
 
     mass:number;
+    analytical:boolean;
+    analyticalMult: number;
 }
 
 interface MemberInfo {
@@ -15,7 +17,10 @@ interface MemberInfo {
 
     tensionKnown: boolean,
     tension: number,
-    buckles: boolean,
+
+    failsAt: number,
+    fails: boolean,
+
     direction: vec2,
 
     startId:number,
@@ -53,6 +58,7 @@ interface Beam {
     massPerLength: number,
 }
 
+const TENSILE_STRENGTH = 260;
 const HOLE_D = 3.2;
 
 export const BEAMS:Beam[] = [
@@ -91,8 +97,12 @@ function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number 
     return stress;
 }
 
-function SumForces(joint: JointInfo): {forceIn:vec2, unknowns:MemberInfo[], directions:number[]} {
+function SumForces(joint: JointInfo, analytical:boolean): {forceIn:vec2, unknowns:MemberInfo[], directions:number[]} {
     let forceIn:vec2 = [joint.force[0], joint.force[1]];
+    if(analytical && Magnitude(forceIn) != 0) {
+        //If an analytical solution can be found use normal vectors
+        forceIn = Normalize(forceIn);
+    }
     let unknowns:MemberInfo[] = [];
     let directions: number[] = [];
     for(let member of joint.membersIn) {
@@ -116,8 +126,8 @@ function SumForces(joint: JointInfo): {forceIn:vec2, unknowns:MemberInfo[], dire
     return {forceIn:forceIn, unknowns:unknowns, directions:directions};
 }
 
-function SolveFreeJoint(joint: JointInfo) {
-    let forces = SumForces(joint);
+function SolveFreeJoint(joint: JointInfo, analytical:boolean) {
+    let forces = SumForces(joint, analytical);
     let [d1, d2] = [forces.unknowns[0].direction, forces.unknowns[1].direction];
     let N2 = (d1[0] * forces.forceIn[1] - forces.forceIn[0] * d1[1]) / (d2[1] * d1[0] - d2[0] * d1[1]);
     let N1 = (forces.forceIn[0] - N2*d2[0])/d1[0];
@@ -129,7 +139,7 @@ function SolveFreeJoint(joint: JointInfo) {
     forces.unknowns[1].tensionKnown = true;
 }
 
-function SolveNextJoint(joints: JointsObject):string[] {
+function SolveNextJoint(joints: JointsObject, analytical:boolean, analyticalMult:number):string[] {
     let unknownMember = false;
     for(let joint of Object.values(joints)) {
         if(joint.fixed) continue;
@@ -147,8 +157,8 @@ function SolveNextJoint(joints: JointsObject):string[] {
         }
         if(knownCount > 0 && unknownCount > 0 && unknownCount < 3) {
             //Can solve via static analysis
-            SolveFreeJoint(joint);
-            return SolveNextJoint(joints);
+            SolveFreeJoint(joint, analytical);
+            return SolveNextJoint(joints, analytical, analyticalMult);
         }
     }
     if(unknownMember) {
@@ -156,23 +166,34 @@ function SolveNextJoint(joints: JointsObject):string[] {
     }
     for(let joint of Object.values(joints)) {
         if(!joint.fixed) continue;
-        let sumForces = SumForces(joint).forceIn;
-        joint.force = ScaleVector(sumForces, -1);
+        let sumForces = SumForces(joint, analytical).forceIn;
+        joint.force = ScaleVector(sumForces, -analyticalMult);
     }
     return [];
 }
 
-function GetBucklingData(allMembers:MemberInfo[]) {
+function GetBucklingData(allMembers:MemberInfo[], mult:number) {
     for(let member of allMembers) {
-        if(member.tension > 0) continue;
+        if(member.tension*mult > 0) continue;
 
         const area = GetEffectiveArea(member.beamType);
         const stress = Math.abs(member.tension/area);
         const buckleStress = GetBuckleStress(member, BUCKLE_A);
-        if(stress > buckleStress) {
-            console.log({buckleStress:buckleStress, stress:stress});
-            member.buckles = true;
-        }
+
+        member.fails = Math.abs(stress*mult) > buckleStress;
+        member.failsAt = buckleStress/stress;
+    }
+}
+
+function GetTensionData(allMembers:MemberInfo[], mult:number) {
+    for(let member of allMembers) {
+        if(member.tension*mult < 0) continue;
+
+        const area = GetEffectiveArea(member.beamType);
+        const stress = Math.abs(member.tension/area);
+
+        member.fails = Math.abs(stress*mult)>TENSILE_STRENGTH;
+        member.failsAt = TENSILE_STRENGTH/stress;
     }
 }
 
@@ -187,11 +208,14 @@ function MemberMass(allMembers:MemberInfo[]) {
 export function RunSimulation(joints:JointInput[], members:MemberInput[]):SimulationOut {
     let results:SimulationOut = {
         members:[],
-        joints:[],
+        joints:{},
         warnings:[],
         errors:[],
+        analyticalMult: 1,
+        analytical: false,
         mass:0,
     }
+    let forcesCount:number = 0;
     let allJoints:JointsObject = {};
     let allMembers:MemberInfo[] = [];
 
@@ -209,6 +233,20 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             membersIn: [],
             membersOut: [],
         };
+        if(Magnitude(joint.force) != 0) forcesCount++;
+    }
+
+    switch(forcesCount) {
+        case 0:
+            results.errors.push("No forces found, cannot perform analysis");
+            break;
+        case 1:
+            const forceObj = Object.values(allJoints).filter((obj)=>{return Magnitude(obj.force) != 0;})[0];
+            results.analyticalMult = Magnitude(forceObj.force);
+            results.analytical = true;
+            break;
+        default:
+            results.warnings.push("Too many forces to solve analytically");
     }
 
     for(let member of members) {
@@ -220,7 +258,8 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
         const memberInfo:MemberInfo = {
             name: member.name,
             tensionKnown: false,
-            buckles: false,
+            failsAt: 0,
+            fails: false,
             tension: 0,
             direction: directionNorm,
 
@@ -237,9 +276,10 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     results.joints = allJoints;
     results.members = allMembers;
 
-    results.errors.push(...SolveNextJoint(results.joints));
+    results.errors.push(...SolveNextJoint(results.joints, results.analytical, results.analyticalMult));
     results.mass = MemberMass(allMembers);
-    GetBucklingData(allMembers);
+    GetBucklingData(allMembers, results.analyticalMult);
+    GetTensionData(allMembers, results.analyticalMult);
 
     return results;
 }
