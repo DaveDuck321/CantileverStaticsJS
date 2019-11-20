@@ -29,8 +29,31 @@
         </tr></table>
     </body>
     <style>
+        .out_table {
+            border-collapse: collapse;
+        }
+        .out_table > tr > td {
+            border: 1px solid black;
+        }
+        .out_table > tr > td:first-child {
+            font-weight: bold;
+        }
+        .out_table > tr:first-child {
+            font-weight: bold;
+        }
+
+        #member_info {
+            border-collapse: collapse;
+        }
+        #member_info > tr > td {
+            border: 1px solid black;
+        }
+        #member_info > tr > td:first-child  {
+            font-weight: bold;
+        }
+
         .error_out {
-            color:red;
+            color:#aa0000;
         }
         .warning_out {
             color:orange;

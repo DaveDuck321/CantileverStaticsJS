@@ -1,6 +1,6 @@
 import { DrawScene } from "./renderer";
-import {vec2, Magnitude} from "./vecMaths";
-import { RunSimulation, BEAMS } from "./analyse";
+import {vec2, Magnitude, Round} from "./math_util";
+import { RunSimulation, BEAMS, GetEffectiveArea } from "./analyse";
 
 let jointCount = 0;
 let memberCount = 0;
@@ -21,13 +21,13 @@ export class MemberInput {
     startSelectElement: HTMLSelectElement;
     endSelectElement: HTMLSelectElement;
 
-    constructor(membersIn: HTMLElement, name:string, start:number, end:number) {
+    constructor(membersIn: HTMLElement, name:string, start:number, end:number, type:number=0) {
         this.id = ++memberCount;
         this.name = name;
 
         this.start = start;
         this.end = end;
-        this.type = 0;
+        this.type = type;
 
         this.memberSpan = <HTMLElement>document.createElement("DIV");
         this.nameInput = <HTMLInputElement>document.createElement("INPUT");
@@ -241,19 +241,19 @@ function initialCantilever() {
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0 ,0], 0, true));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 0]));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 0]));
-   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [815, 0], -2700));
+   jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [815, 0], -1350));
 
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0, 255], 0, true));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 255-85]));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 255-85*2]));
 
-   memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].id, jointInputs[1].id));
-   memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].id, jointInputs[2].id));
-   memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[2].id, jointInputs[3].id));
+   memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].id, jointInputs[1].id, 4));
+   memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].id, jointInputs[2].id, 4));
+   memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[2].id, jointInputs[3].id, 4));
 
-   memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[4].id, jointInputs[5].id));
-   memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[5].id, jointInputs[6].id));
-   memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[6].id, jointInputs[3].id));
+   memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[4].id, jointInputs[5].id, 2));
+   memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[5].id, jointInputs[6].id, 2));
+   memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[6].id, jointInputs[3].id, 2));
 
    memberInputs.push(new MemberInput(membersIn, `g`, jointInputs[4].id, jointInputs[1].id));
    memberInputs.push(new MemberInput(membersIn, `h`, jointInputs[5].id, jointInputs[1].id));
@@ -269,8 +269,11 @@ function DrawChanges() {
     DrawScene(context, [canvas.width, canvas.height], results);
 }
 
-export function AddCell(row:HTMLElement, text:string|number) {
+export function AddCell(row:HTMLElement, text:string|number, ...classList:string[]) {
     let cell = document.createElement("TD");
+    for(let c of classList) {
+        cell.classList.add(c);
+    }
     cell.append(<string>text);
     row.appendChild(cell);
 }
@@ -283,6 +286,7 @@ function PopulateMemberTable() {
     AddCell(row, "Size (mm)");
     AddCell(row, "Thickness (mm)");
     AddCell(row, "Mass/length (g/mm)");
+    AddCell(row, "Effctive Area (mm)");
 
     memberTable.append(row);
     let count = 0;
@@ -292,6 +296,7 @@ function PopulateMemberTable() {
         AddCell(row, member.size);
         AddCell(row, member.thickness);
         AddCell(row, member.massPerLength);
+        AddCell(row, Round(GetEffectiveArea(member), 1));
 
         memberTable.append(row);
     }

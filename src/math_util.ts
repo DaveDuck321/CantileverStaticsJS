@@ -24,3 +24,7 @@ export function Normalize(a:vec2):vec2 {
     const length = Magnitude(a);
     return ScaleVector(a, 1/length);
 }
+
+export function Round(n:number, points:number) {
+    return Math.round(n*(10**points))/(10**points);
+}

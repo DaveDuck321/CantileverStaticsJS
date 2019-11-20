@@ -1,5 +1,5 @@
 import { JointInput, MemberInput } from "./input";
-import { SubVectors, Normalize, Magnitude, vec2, ScaleVector, AddVectors } from "./vecMaths";
+import { SubVectors, Normalize, Magnitude, vec2, ScaleVector, AddVectors } from "./math_util";
 
 export interface SimulationOut {
     members:MemberInfo[];
@@ -17,8 +17,10 @@ interface MemberInfo {
 
     tensionKnown: boolean,
     tension: number,
+    stress: number,
 
-    failsAt: number,
+    failsAtLocal: number,
+    failsAtLoad: number,
     fails: boolean,
 
     direction: vec2,
@@ -83,8 +85,8 @@ const BUCKLE_A:BuckleGraph = {
     ],
 };
 
-function GetEffectiveArea(beam: Beam) {
-    return ((3*beam.size*beam.thickness)/2 - HOLE_D) * 0.9;
+export function GetEffectiveArea(beam: Beam) {
+    return (3*beam.size/2 - HOLE_D) * beam.thickness * 0.9;
 }
 
 function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
@@ -135,6 +137,9 @@ function SolveFreeJoint(joint: JointInfo, analytical:boolean) {
     forces.unknowns[0].tension = N1 * forces.directions[0];
     forces.unknowns[1].tension = N2 * forces.directions[1];
 
+    //forces.unknowns[0].stress = forces.unknowns[0].tension / GetEffectiveArea(forces.unknowns[0].beamType);
+    //forces.unknowns[1].stress = forces.unknowns[1].tension / GetEffectiveArea(forces.unknowns[1].beamType);
+
     forces.unknowns[0].tensionKnown = true;
     forces.unknowns[1].tensionKnown = true;
 }
@@ -181,7 +186,8 @@ function GetBucklingData(allMembers:MemberInfo[], mult:number) {
         const buckleStress = GetBuckleStress(member, BUCKLE_A);
 
         member.fails = Math.abs(stress*mult) > buckleStress;
-        member.failsAt = buckleStress/stress;
+        member.failsAtLoad = buckleStress/stress;
+        member.failsAtLocal = buckleStress*area;
     }
 }
 
@@ -191,9 +197,15 @@ function GetTensionData(allMembers:MemberInfo[], mult:number) {
 
         const area = GetEffectiveArea(member.beamType);
         const stress = Math.abs(member.tension/area);
+        if(member.name == "d") {
+            console.log(member.tension);
+            console.log(stress);
+        }
 
         member.fails = Math.abs(stress*mult)>TENSILE_STRENGTH;
-        member.failsAt = TENSILE_STRENGTH/stress;
+
+        member.failsAtLoad = TENSILE_STRENGTH/stress;
+        member.failsAtLocal = TENSILE_STRENGTH*area;
     }
 }
 
@@ -258,9 +270,12 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
         const memberInfo:MemberInfo = {
             name: member.name,
             tensionKnown: false,
-            failsAt: 0,
+            failsAtLocal: 0,
+            failsAtLoad: 0,
+
             fails: false,
             tension: 0,
+            stress:0,
             direction: directionNorm,
 
             startId: member.start,

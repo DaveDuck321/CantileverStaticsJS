@@ -1,10 +1,6 @@
 import { JointInput, MemberInput, AddCell } from "./input";
-import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize} from "./vecMaths";
+import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize, Round} from "./math_util";
 import { SimulationOut } from "./analyse";
-
-function Round(n:number, points:number) {
-    return Math.round(n*(10**points))/(10**points);
-}
 
 function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
     let [rangeX, rangeY] = [max[0] - min[0], max[1] - min[1]];
@@ -41,6 +37,16 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     }
     let scale = Scale2Viewport([minX, minY], [maxX, maxY], dimsPx);
     let table = document.createElement('TABLE');
+    table.classList.add("out_table");
+    let headingRow = document.createElement('TR');
+    AddCell(headingRow, "Member");
+    AddCell(headingRow, "Type of load");
+    AddCell(headingRow, "Tension");
+    AddCell(headingRow, "Tension before failure");
+    AddCell(headingRow, "Load before failure");
+    AddCell(headingRow, "Fails under current load");
+    table.appendChild(headingRow);
+
     for(let member of results.members) {
         const tension = member.tension*results.analyticalMult;
         context.fillStyle = 'white';
@@ -54,19 +60,21 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         context.stroke();
 
         context.fillStyle = 'black';
+        const rowClasses = member.fails?["error_out"]:[];
         let centerPos = AddVectors(startPos, LinMultVectors(SubVectors(endPos, startPos), [0.5, 0.5]));
         context.fillText(member.name, centerPos[0], centerPos[1]);
 
         let rowOut = document.createElement('TR');
-        AddCell(rowOut, member.name);
+        AddCell(rowOut, member.name, "tab_header", ...rowClasses);
         if(tension > 0) {
-            AddCell(rowOut, "Tension");
+            AddCell(rowOut, "Tensive", ...rowClasses);
         } else {
-            AddCell(rowOut, "Compression");
+            AddCell(rowOut, "Compressive", ...rowClasses);
         }
-        AddCell(rowOut, `${Round(tension/1000, 1)} kN`);
-        AddCell(rowOut, `${Round(member.failsAt/1000, 1)} kN`);
-        AddCell(rowOut, ""+member.fails);
+        AddCell(rowOut, `${Round(tension/1000, 1)} kN`, ...rowClasses);
+        AddCell(rowOut, `${Round(member.failsAtLocal/1000, 1)} kN`, ...rowClasses);
+        AddCell(rowOut, `${Round(member.failsAtLoad/1000, 1)} kN`, ...rowClasses);
+        AddCell(rowOut, ""+member.fails, ...rowClasses);
         table.appendChild(rowOut);
     }
     outElement.appendChild(table);
