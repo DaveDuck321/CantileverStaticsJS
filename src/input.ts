@@ -14,16 +14,19 @@ export class MemberInput {
     start: number;
     end: number;
     type: number;
+    double: boolean;
 
     memberSpan: HTMLElement;
     nameInput: HTMLInputElement;
     typeSelectElement: HTMLSelectElement;
     startSelectElement: HTMLSelectElement;
     endSelectElement: HTMLSelectElement;
+    doubleInput: HTMLInputElement;
 
     constructor(membersIn: HTMLElement, name:string, start:number, end:number, type:number=0) {
         this.id = ++memberCount;
         this.name = name;
+        this.double = false;
 
         this.start = start;
         this.end = end;
@@ -31,9 +34,12 @@ export class MemberInput {
 
         this.memberSpan = <HTMLElement>document.createElement("DIV");
         this.nameInput = <HTMLInputElement>document.createElement("INPUT");
+        this.doubleInput = <HTMLInputElement>document.createElement("INPUT");
+        this.doubleInput.type = "checkbox"
 
         this.nameInput.value = name;
-        this.nameInput.onchange = (ev)=>{this.updateName(ev, this)};
+        this.nameInput.onchange = ()=>{this.updateName(this)};
+        this.doubleInput.onchange = ()=>{this.updateDouble(this)};
 
         this.startSelectElement = <HTMLSelectElement>document.createElement("SELECT");
         this.endSelectElement = <HTMLSelectElement>document.createElement("SELECT");
@@ -42,6 +48,7 @@ export class MemberInput {
             const option = new Option(""+i, ""+i);
             this.typeSelectElement.options.add(option);
         }
+        this.typeSelectElement.options.selectedIndex = type;
 
         this.startSelectElement.onchange = ()=>{this.updateStart(this)};
         this.endSelectElement.onchange = ()=>{this.updateEnd(this)};
@@ -55,9 +62,15 @@ export class MemberInput {
         this.memberSpan.appendChild(this.endSelectElement);
         this.memberSpan.append(" Type: ");
         this.memberSpan.appendChild(this.typeSelectElement);
+        this.memberSpan.append(" Double Beam: ");
+        this.memberSpan.appendChild(this.doubleInput);
 
         membersIn.appendChild(this.memberSpan);
         this.updateAllOptions();
+    }
+    updateDouble(obj:MemberInput) {
+        obj.double = obj.doubleInput.checked;
+        DrawChanges();
     }
     updateStart(obj:MemberInput) {
         const selected = obj.startSelectElement.selectedOptions[0];
@@ -89,9 +102,8 @@ export class MemberInput {
             selectElement.options.add(option);
         }
     }
-    updateName(ev:Event, obj:MemberInput) {
-        const inputBox = <HTMLInputElement>ev.srcElement;
-        obj.name = inputBox.value;
+    updateName(obj:MemberInput) {
+        obj.name = obj.nameInput.value;
         DrawChanges();
     }
 }
@@ -262,6 +274,7 @@ function initialCantilever() {
 }
 
 function DrawChanges() {
+    console.log("Updated");
     const canvas = <HTMLCanvasElement>document.getElementById("canvas_out");
     const context = <CanvasRenderingContext2D>canvas.getContext('2d');
 
@@ -274,7 +287,7 @@ export function AddCell(row:HTMLElement, text:string|number, ...classList:string
     for(let c of classList) {
         cell.classList.add(c);
     }
-    cell.append(<string>text);
+    cell.innerHTML = <string>text;
     row.appendChild(cell);
 }
 
@@ -286,7 +299,7 @@ function PopulateMemberTable() {
     AddCell(row, "Size (mm)");
     AddCell(row, "Thickness (mm)");
     AddCell(row, "Mass/length (g/mm)");
-    AddCell(row, "Effctive Area (mm)");
+    AddCell(row, "Effctive Area (mm<sup>2</sup>)");
 
     memberTable.append(row);
     let count = 0;
@@ -296,7 +309,7 @@ function PopulateMemberTable() {
         AddCell(row, member.size);
         AddCell(row, member.thickness);
         AddCell(row, member.massPerLength);
-        AddCell(row, Round(GetEffectiveArea(member), 1));
+        AddCell(row, Round(GetEffectiveArea(member, 1), 1));
 
         memberTable.append(row);
     }

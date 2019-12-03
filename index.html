@@ -5,21 +5,27 @@
         <script data-main="build/input.js" src="vendor/require.js"></script>
     </head>
     <body>
+        <h2>Cantilever Statics Analysis</h2>
         <table><tr>
-            <td><canvas id="canvas_out" width=500 height=500></canvas></td>
+            <td>
+                <h3>Visualisation</h3>
+                <canvas id="canvas_out" width=500 height=500></canvas>
+            </td>
             <td>
                 <h3>Member types</h3>
-                <table id="member_info"></table>
+                <table id="member_info" class="data_table"></table>
                 <h3>Constants</h3>
                 <p>Tensile strength: 260 MPa</p>
                 <p>Pop-rivet hole Diameter: 3.2 mm</p>
             </td>
         </tr></table>
+        <h3>Analysis results</h3>
         <span id="output"></span>
         <table><tr>
             <td><div id="members_in">
                 <h3>Member input</h3>
-            </div><br/>
+            </div>
+            <button id="optimise">Optimise members</button><br/>
             <button id="new_member">Add new member</button></td>
             <td style="width:10px"></td>
             <td><div id="joints_in">
@@ -29,26 +35,16 @@
         </tr></table>
     </body>
     <style>
-        .out_table {
+        .data_table {
             border-collapse: collapse;
         }
-        .out_table > tr > td {
+        .data_table > tr > td {
             border: 1px solid black;
         }
-        .out_table > tr > td:first-child {
+        .data_table > tr > td:first-child {
             font-weight: bold;
         }
-        .out_table > tr:first-child {
-            font-weight: bold;
-        }
-
-        #member_info {
-            border-collapse: collapse;
-        }
-        #member_info > tr > td {
-            border: 1px solid black;
-        }
-        #member_info > tr > td:first-child  {
+        .data_table > tr:first-child {
             font-weight: bold;
         }
 

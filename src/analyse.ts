@@ -30,6 +30,7 @@ interface MemberInfo {
 
     length: number,
     beamType: Beam,
+    beamCount: number,
 }
 
 interface JointInfo {
@@ -85,8 +86,23 @@ const BUCKLE_A:BuckleGraph = {
     ],
 };
 
-export function GetEffectiveArea(beam: Beam) {
-    return (3*beam.size/2 - HOLE_D) * beam.thickness * 0.9;
+const BUCKLE_B:BuckleGraph = {
+    scale: 1.938,
+    range: [12.2, 116.3],
+    coefficients: [
+        232.506,
+        0,
+        -0.170192,
+        0.003336,
+        -0.0000254,
+        7.014e-8,
+    ],
+};
+
+const BUCKLE_GRAPHS = [BUCKLE_A, BUCKLE_B];
+
+export function GetEffectiveArea(beam: Beam, beamCount: number) {
+    return (3*beam.size/2 - HOLE_D) * beam.thickness * 0.9 * beamCount;
 }
 
 function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
@@ -181,9 +197,9 @@ function GetBucklingData(allMembers:MemberInfo[], mult:number) {
     for(let member of allMembers) {
         if(member.tension*mult > 0) continue;
 
-        const area = GetEffectiveArea(member.beamType);
+        const area = GetEffectiveArea(member.beamType, member.beamCount);
         const stress = Math.abs(member.tension/area);
-        const buckleStress = GetBuckleStress(member, BUCKLE_A);
+        const buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.beamCount]);
 
         member.fails = Math.abs(stress*mult) > buckleStress;
         member.failsAtLoad = buckleStress/stress;
@@ -195,7 +211,7 @@ function GetTensionData(allMembers:MemberInfo[], mult:number) {
     for(let member of allMembers) {
         if(member.tension*mult < 0) continue;
 
-        const area = GetEffectiveArea(member.beamType);
+        const area = GetEffectiveArea(member.beamType, member.beamCount);
         const stress = Math.abs(member.tension/area);
         if(member.name == "d") {
             console.log(member.tension);
@@ -212,7 +228,7 @@ function GetTensionData(allMembers:MemberInfo[], mult:number) {
 function MemberMass(allMembers:MemberInfo[]) {
     let total = 0;
     for(let member of allMembers) {
-        total += member.beamType.massPerLength * member.length;
+        total += member.beamType.massPerLength * member.length * member.beamCount;
     }
     return total;
 }
@@ -269,6 +285,7 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
 
         const memberInfo:MemberInfo = {
             name: member.name,
+            beamCount: member.double?2:1,
             tensionKnown: false,
             failsAtLocal: 0,
             failsAtLoad: 0,

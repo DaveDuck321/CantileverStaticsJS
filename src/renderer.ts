@@ -37,7 +37,7 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     }
     let scale = Scale2Viewport([minX, minY], [maxX, maxY], dimsPx);
     let table = document.createElement('TABLE');
-    table.classList.add("out_table");
+    table.classList.add("out_table", "data_table");
     let headingRow = document.createElement('TR');
     AddCell(headingRow, "Member");
     AddCell(headingRow, "Type of load");
@@ -60,7 +60,7 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         context.stroke();
 
         context.fillStyle = 'black';
-        const rowClasses = member.fails?["error_out"]:[];
+        const rowClasses = member.fails?["error_out"]:[tension > 0?"tension_out":"compression_out"];
         let centerPos = AddVectors(startPos, LinMultVectors(SubVectors(endPos, startPos), [0.5, 0.5]));
         context.fillText(member.name, centerPos[0], centerPos[1]);
 
@@ -98,14 +98,14 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         }
         context.fillStyle = 'black';
         if(Magnitude(joint.force) != 0) {
-            const direction = ScaleVector(Normalize(joint.force), 50); //30px force line
+            const direction = ScaleVector(Normalize(joint.force), 60); //70px force line
             context.beginPath();
             context.moveTo(pos[0], pos[1]);
             context.lineTo(pos[0] + direction[0], pos[1]-direction[1]);
             context.stroke();
 
             const textVec = ScaleVector(direction, 0.5);
-            context.fillText(`${Math.round(Magnitude(joint.force))}N`, pos[0] + textVec[0], pos[1] - textVec[1]);
+            context.fillText(`${Round(Magnitude(joint.force)/1000, 1)}N`, pos[0] + textVec[0], pos[1] - textVec[1]);
         }
         context.fillText(joint.name, pos[0], pos[1]);
     }
