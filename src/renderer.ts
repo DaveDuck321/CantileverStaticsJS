@@ -1,6 +1,6 @@
 import { JointInput, MemberInput, AddCell } from "./input";
 import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize, Round} from "./math_util";
-import { SimulationOut } from "./analyse";
+import { SimulationOut, JointInfo } from "./analyse";
 
 function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
     let [rangeX, rangeY] = [max[0] - min[0], max[1] - min[1]];
@@ -28,12 +28,12 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     for(let member of results.members) {
         maxTension = Math.max(maxTension, Math.abs(member.tension));
     }
-    for(let joint of Object.values(results.joints)) {
-        minX = Math.min(minX, joint.position[0]);
-        minY = Math.min(minY, joint.position[1]);
+    for(let joint of <JointInfo[]>Object.values(results.joints)) {
+        minX = Math.min(minX, joint.data.position[0]);
+        minY = Math.min(minY, joint.data.position[1]);
 
-        maxX = Math.max(maxX, joint.position[0]);
-        maxY = Math.max(maxY, joint.position[1]);
+        maxX = Math.max(maxX, joint.data.position[0]);
+        maxY = Math.max(maxY, joint.data.position[1]);
     }
     let scale = Scale2Viewport([minX, minY], [maxX, maxY], dimsPx);
     let table = document.createElement('TABLE');
@@ -52,8 +52,8 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         context.fillStyle = 'white';
         context.strokeStyle = `rgb(${Math.abs(member.tension/maxTension * 255)}, 0, 0)`;
         context.lineWidth = member.beamType.id + 1;
-        const startPos = scale(results.joints[member.startId].position);
-        const endPos = scale(results.joints[member.endId].position);
+        const startPos = scale(results.joints[member.data.startId].data.position);
+        const endPos = scale(results.joints[member.data.endId].data.position);
         context.beginPath();
         context.moveTo(startPos[0], startPos[1]);
         context.lineTo(endPos[0], endPos[1]);
@@ -62,10 +62,10 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         context.fillStyle = 'black';
         const rowClasses = member.fails?["error_out"]:[tension > 0?"tension_out":"compression_out"];
         let centerPos = AddVectors(startPos, LinMultVectors(SubVectors(endPos, startPos), [0.5, 0.5]));
-        context.fillText(member.name, centerPos[0], centerPos[1]);
+        context.fillText(member.data.name, centerPos[0], centerPos[1]);
 
         let rowOut = document.createElement('TR');
-        AddCell(rowOut, member.name, "tab_header", ...rowClasses);
+        AddCell(rowOut, member.data.name, "tab_header", ...rowClasses);
         if(tension > 0) {
             AddCell(rowOut, "Tensive", ...rowClasses);
         } else {
@@ -84,10 +84,11 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     context.textBaseline = "middle";
     context.textAlign = "center";
     context.font = "15px Arial";
-    for(let joint of Object.values(results.joints)) {
+    for(let joint of <JointInfo[]>Object.values(results.joints)) {
+        const jointData = joint.data;
         context.fillStyle = 'white';
-        const pos = scale(joint.position);
-        if(joint.fixed) {
+        const pos = scale(jointData.position);
+        if(jointData.fixed) {
             context.fillRect(pos[0]-8, pos[1]-8, 16, 16)
             context.strokeRect(pos[0]-8, pos[1]-8, 16, 16);
         } else {
@@ -97,17 +98,17 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
             context.stroke();
         }
         context.fillStyle = 'black';
-        if(Magnitude(joint.force) != 0) {
-            const direction = ScaleVector(Normalize(joint.force), 60); //70px force line
+        if(Magnitude(joint.externalForce) != 0) {
+            const direction = ScaleVector(Normalize(joint.externalForce), 60); //70px force line
             context.beginPath();
             context.moveTo(pos[0], pos[1]);
             context.lineTo(pos[0] + direction[0], pos[1]-direction[1]);
             context.stroke();
 
             const textVec = ScaleVector(direction, 0.5);
-            context.fillText(`${Round(Magnitude(joint.force)/1000, 1)}N`, pos[0] + textVec[0], pos[1] - textVec[1]);
+            context.fillText(`${Round(Magnitude(joint.externalForce)/1000, 1)}N`, pos[0] + textVec[0], pos[1] - textVec[1]);
         }
-        context.fillText(joint.name, pos[0], pos[1]);
+        context.fillText(jointData.name, pos[0], pos[1]);
     }
     for(let error of results.errors) {
         let errorOut = document.createElement("DIV");

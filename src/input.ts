@@ -1,6 +1,7 @@
 import { DrawScene } from "./renderer";
 import {vec2, Magnitude, Round} from "./math_util";
 import { RunSimulation, BEAMS, GetEffectiveArea } from "./analyse";
+import { MemberData, JointData } from "./definition_data";
 
 let jointCount = 0;
 let memberCount = 0;
@@ -8,13 +9,7 @@ let jointInputs:JointInput[] = [];
 let memberInputs:MemberInput[] = [];
 
 export class MemberInput {
-    id: number;
-    name: string;
-
-    start: number;
-    end: number;
-    type: number;
-    double: boolean;
+    data: MemberData;
 
     memberSpan: HTMLElement;
     nameInput: HTMLInputElement;
@@ -24,20 +19,20 @@ export class MemberInput {
     doubleInput: HTMLInputElement;
 
     constructor(membersIn: HTMLElement, name:string, start:number, end:number, type:number=0) {
-        this.id = ++memberCount;
-        this.name = name;
-        this.double = false;
-
-        this.start = start;
-        this.end = end;
-        this.type = type;
+        this.data = {
+            id: ++memberCount,
+            name: name,
+            startId: start,
+            endId: end,
+            beamType: type,
+            beamCount:1,
+        };
 
         this.memberSpan = <HTMLElement>document.createElement("DIV");
         this.nameInput = <HTMLInputElement>document.createElement("INPUT");
         this.doubleInput = <HTMLInputElement>document.createElement("INPUT");
         this.doubleInput.type = "checkbox"
 
-        this.nameInput.value = name;
         this.nameInput.onchange = ()=>{this.updateName(this)};
         this.doubleInput.onchange = ()=>{this.updateDouble(this)};
 
@@ -48,7 +43,6 @@ export class MemberInput {
             const option = new Option(""+i, ""+i);
             this.typeSelectElement.options.add(option);
         }
-        this.typeSelectElement.options.selectedIndex = type;
 
         this.startSelectElement.onchange = ()=>{this.updateStart(this)};
         this.endSelectElement.onchange = ()=>{this.updateEnd(this)};
@@ -66,54 +60,58 @@ export class MemberInput {
         this.memberSpan.appendChild(this.doubleInput);
 
         membersIn.appendChild(this.memberSpan);
+
         this.updateAllOptions();
+        this.matchInternalState();
+    }
+    matchInternalState() {
+        this.nameInput.value = this.data.name;
+        this.startSelectElement.value = ""+this.data.startId;
+        this.endSelectElement.value = ""+this.data.endId;
+        this.typeSelectElement.value = ""+this.data.beamType;
+        this.doubleInput.checked = this.data.beamCount>1;
     }
     updateDouble(obj:MemberInput) {
-        obj.double = obj.doubleInput.checked;
+        obj.data.beamCount = obj.doubleInput.checked?2:1;
         DrawChanges();
     }
     updateStart(obj:MemberInput) {
-        const selected = obj.startSelectElement.selectedOptions[0];
-        obj.start = parseInt(selected.value);
+        obj.data.startId = parseInt(obj.startSelectElement.value);
         DrawChanges();
     }
     updateEnd(obj:MemberInput) {
         const selected = obj.endSelectElement.selectedOptions[0];
-        obj.end = parseInt(selected.value);
+        obj.data.endId = parseInt(selected.value);
         DrawChanges();
     }
     updateType(obj:MemberInput) {
         const selected = obj.typeSelectElement.selectedOptions[0];
-        obj.type = parseInt(selected.value);
+        obj.data.beamType = parseInt(selected.value);
         DrawChanges();
     }
 
     updateAllOptions() {
-        this.updateOptions(this.startSelectElement, this.start);
-        this.updateOptions(this.endSelectElement, this.end);
+        this.updateOptions(this.startSelectElement, this.data.startId);
+        this.updateOptions(this.endSelectElement, this.data.endId);
     }
     updateOptions(selectElement:HTMLSelectElement, id:number): void {
         while(selectElement.options.length > 0) {
             selectElement.options.remove(0);
         }
         for(let joint of jointInputs) {
-            let selected = joint.id == id;
-            let option = new Option(joint.name, joint.id+"", selected, selected);
+            let selected = joint.data.id == id;
+            let option = new Option(joint.data.name, joint.data.id+"", selected, selected);
             selectElement.options.add(option);
         }
     }
     updateName(obj:MemberInput) {
-        obj.name = obj.nameInput.value;
+        obj.data.name = obj.nameInput.value;
         DrawChanges();
     }
 }
 
 export class JointInput {
-    id: number;
-    name: string;
-    position: vec2;
-    force: vec2;
-    fixed: boolean;
+    data: JointData;
 
     jointSpan: HTMLElement;
     nameInput: HTMLInputElement;
@@ -122,10 +120,16 @@ export class JointInput {
     forceInput: HTMLInputElement;
 
     constructor(jointsIn: HTMLElement, name: string, position:vec2 = [0, 0], force:vec2|number = 0, fixed:boolean = false) {
-        this.id = ++jointCount;
-        this.name = name;
-        this.position = position;
-        this.fixed = fixed;
+        if(typeof force === "number") {
+            force = [0, force];
+        }
+        this.data = {
+            id: ++jointCount,
+            name: name,
+            position: position,
+            fixed: fixed,
+            force: force,
+        };
 
         this.jointSpan = document.createElement("DIV");
         this.jointSpan.classList.add("joint_in");
@@ -135,17 +139,7 @@ export class JointInput {
         this.forceInput = <HTMLInputElement>document.createElement("INPUT");
         this.fixedInput = <HTMLInputElement>document.createElement("INPUT");
         this.fixedInput.type = "checkbox";
-
-        this.positionInput.value = `${position[0]}, ${position[1]}`;
-        this.fixedInput.checked = fixed;
-        if(typeof force === "number") {
-            this.force = [0, force];
-            this.forceInput.value = `${force}`;
-        } else {
-            this.force = force;
-            this.forceInput.value = `${force[0]}, ${force[1]}`;
-        }
-        this.nameInput.value = name;
+        
         this.nameInput.onchange = (ev)=>{this.updateName(ev, this)};
         this.positionInput.onchange = (ev)=>{this.updatePosition(ev, this)};
         this.forceInput.onchange = (ev)=>{this.updateForce(ev, this)};
@@ -161,11 +155,24 @@ export class JointInput {
         this.jointSpan.appendChild(this.fixedInput);
 
         jointsIn.appendChild(this.jointSpan);
+
+        this.matchInternalState();
+    }
+    matchInternalState() {
+        const state = this.data;
+        this.nameInput.value = state.name;
+        this.positionInput.value = `${state.position[0]}, ${state.position[1]}`;
+        this.fixedInput.checked = state.fixed;
+        if(state.force[0] === 0) {
+            this.forceInput.value = `${state.force[1]}`;
+        } else {
+            this.forceInput.value = `${state.force[0]}, ${state.force[1]}`;
+        }
     }
     updateName(ev: Event, obj:JointInput):void {
         const input = <HTMLInputElement>ev.srcElement;
-        if(input.value !== "" && canUpdateName(obj.id, input.value)) {
-            obj.name = input.value;
+        if(input.value !== "" && canUpdateName(obj.data.id, input.value)) {
+            obj.data.name = input.value;
             refeshSelectInputs();
         } else {
             alert("Invalid/ reused joint name");
@@ -180,17 +187,17 @@ export class JointInput {
             return;
         }
         let [x, y] = posString.split(',');
-        obj.position = [parseFloat(x), parseFloat(y)];
+        obj.data.position = [parseFloat(x), parseFloat(y)];
         DrawChanges();
     }
     updateForce(ev: Event, obj:JointInput) {
         const input = <HTMLInputElement>ev.srcElement;
         let forceString = input.value.trim();
         if(forceString.match(/^-?\d+$/)) {
-            obj.force = [0, parseFloat(forceString)];
+            obj.data.force = [0, parseFloat(forceString)];
         } else if(forceString.match(/^-?\d+ ?, ?-?\d+$/)) {
             let [x, y] = forceString.split(',');
-            obj.force = [parseFloat(x), parseFloat(y)];
+            obj.data.force = [parseFloat(x), parseFloat(y)];
         } else {
             console.log("Position does not match regex");
             return;
@@ -199,15 +206,15 @@ export class JointInput {
     }
     updateFixed(ev: Event, obj:JointInput) {
         const input = <HTMLInputElement>ev.srcElement;
-        obj.fixed = input.checked;
+        obj.data.fixed = input.checked;
         DrawChanges();
     }
 }
 
 function canUpdateName(id:number, newName:string):boolean {
     for(let joint of jointInputs) {
-        if(id === joint.id) continue;
-        if(newName === joint.name) return false;
+        if(id === joint.data.id) continue;
+        if(newName === joint.data.name) return false;
     }
     return true;
 }
@@ -228,7 +235,7 @@ function addNewJoint() {
 
 function addNewMember() {
     const membersIn = <HTMLElement>document.getElementById("members_in");
-    memberInputs.push(new MemberInput(membersIn, `Member ${memberCount}`, jointInputs[0].id, jointInputs[1].id));
+    memberInputs.push(new MemberInput(membersIn, `Member ${memberCount}`, jointInputs[0].data.id, jointInputs[1].data.id));
     DrawChanges();
 }
 
@@ -236,20 +243,6 @@ function initialCantilever() {
     const jointsIn = <HTMLElement>document.getElementById("joints_in");
     const membersIn = <HTMLElement>document.getElementById("members_in");
 
-    /*
-    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0 ,0], 0, true));
-    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0, 255], 0, true));
-    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [407.5, 0]));
-    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [407.5, 255]));
-    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [815, 0], -2700));
-    
-    memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].id, jointInputs[2].id));
-    memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].id, jointInputs[2].id));
-    memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[1].id, jointInputs[3].id));
-    memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[2].id, jointInputs[3].id));
-    memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[3].id, jointInputs[4].id));
-    memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[2].id, jointInputs[4].id));
-    */
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [0 ,0], 0, true));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 0]));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 0]));
@@ -259,18 +252,18 @@ function initialCantilever() {
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272, 255-85]));
    jointInputs.push(new JointInput(jointsIn, `${jointCount}`, [272+272, 255-85*2]));
 
-   memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].id, jointInputs[1].id, 4));
-   memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].id, jointInputs[2].id, 4));
-   memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[2].id, jointInputs[3].id, 4));
+   memberInputs.push(new MemberInput(membersIn, `a`, jointInputs[0].data.id, jointInputs[1].data.id, 4));
+   memberInputs.push(new MemberInput(membersIn, `b`, jointInputs[1].data.id, jointInputs[2].data.id, 4));
+   memberInputs.push(new MemberInput(membersIn, `c`, jointInputs[2].data.id, jointInputs[3].data.id, 4));
 
-   memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[4].id, jointInputs[5].id, 2));
-   memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[5].id, jointInputs[6].id, 2));
-   memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[6].id, jointInputs[3].id, 2));
+   memberInputs.push(new MemberInput(membersIn, `d`, jointInputs[4].data.id, jointInputs[5].data.id, 2));
+   memberInputs.push(new MemberInput(membersIn, `e`, jointInputs[5].data.id, jointInputs[6].data.id, 2));
+   memberInputs.push(new MemberInput(membersIn, `f`, jointInputs[6].data.id, jointInputs[3].data.id, 2));
 
-   memberInputs.push(new MemberInput(membersIn, `g`, jointInputs[4].id, jointInputs[1].id));
-   memberInputs.push(new MemberInput(membersIn, `h`, jointInputs[5].id, jointInputs[1].id));
-   memberInputs.push(new MemberInput(membersIn, `i`, jointInputs[5].id, jointInputs[2].id));
-   memberInputs.push(new MemberInput(membersIn, `j`, jointInputs[6].id, jointInputs[2].id));
+   memberInputs.push(new MemberInput(membersIn, `g`, jointInputs[4].data.id, jointInputs[1].data.id));
+   memberInputs.push(new MemberInput(membersIn, `h`, jointInputs[5].data.id, jointInputs[1].data.id));
+   memberInputs.push(new MemberInput(membersIn, `i`, jointInputs[5].data.id, jointInputs[2].data.id));
+   memberInputs.push(new MemberInput(membersIn, `j`, jointInputs[6].data.id, jointInputs[2].data.id));
 }
 
 function DrawChanges() {
@@ -321,6 +314,7 @@ window.onload = ()=>{
     PopulateMemberTable();
     const addMemberBtn = <HTMLButtonElement>document.getElementById("new_member");
     const addJointBtn = <HTMLButtonElement>document.getElementById("new_joint");
+    const optimiseBtn = <HTMLButtonElement>document.getElementById("optimise");
     addMemberBtn.onclick = addNewMember;
     addJointBtn.onclick = addNewJoint;
 

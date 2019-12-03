@@ -1,5 +1,6 @@
 import { JointInput, MemberInput } from "./input";
 import { SubVectors, Normalize, Magnitude, vec2, ScaleVector, AddVectors } from "./math_util";
+import { MemberData, JointData } from "./definition_data";
 
 export interface SimulationOut {
     members:MemberInfo[];
@@ -13,7 +14,7 @@ export interface SimulationOut {
 }
 
 interface MemberInfo {
-    name: string,
+    data: MemberData,
 
     tensionKnown: boolean,
     tension: number,
@@ -25,21 +26,15 @@ interface MemberInfo {
 
     direction: vec2,
 
-    startId:number,
-    endId:number,
-
     length: number,
     beamType: Beam,
-    beamCount: number,
 }
 
-interface JointInfo {
-    id: number,
-    name: string,
+export interface JointInfo {
+    data:JointData,
+    
+    externalForce:vec2,
 
-    fixed: boolean,
-    position: vec2,
-    force:vec2,
     membersIn: MemberInfo[],
     membersOut: MemberInfo[],
 }
@@ -116,7 +111,7 @@ function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number 
 }
 
 function SumForces(joint: JointInfo, analytical:boolean): {forceIn:vec2, unknowns:MemberInfo[], directions:number[]} {
-    let forceIn:vec2 = [joint.force[0], joint.force[1]];
+    let forceIn:vec2 = [joint.externalForce[0], joint.externalForce[1]];
     if(analytical && Magnitude(forceIn) != 0) {
         //If an analytical solution can be found use normal vectors
         forceIn = Normalize(forceIn);
@@ -153,18 +148,15 @@ function SolveFreeJoint(joint: JointInfo, analytical:boolean) {
     forces.unknowns[0].tension = N1 * forces.directions[0];
     forces.unknowns[1].tension = N2 * forces.directions[1];
 
-    //forces.unknowns[0].stress = forces.unknowns[0].tension / GetEffectiveArea(forces.unknowns[0].beamType);
-    //forces.unknowns[1].stress = forces.unknowns[1].tension / GetEffectiveArea(forces.unknowns[1].beamType);
-
     forces.unknowns[0].tensionKnown = true;
     forces.unknowns[1].tensionKnown = true;
 }
 
 function SolveNextJoint(joints: JointsObject, analytical:boolean, analyticalMult:number):string[] {
     let unknownMember = false;
-    for(let joint of Object.values(joints)) {
-        if(joint.fixed) continue;
-        let knownCount = Magnitude(joint.force)==0?0:1;
+    for(let joint of <JointInfo[]>Object.values(joints)) {
+        if(joint.data.fixed) continue;
+        let knownCount = Magnitude(joint.externalForce)==0?0:1;
         let unknownCount = 0;
         let allMembers = [...joint.membersIn];
         allMembers.push(...joint.membersOut);
@@ -185,10 +177,10 @@ function SolveNextJoint(joints: JointsObject, analytical:boolean, analyticalMult
     if(unknownMember) {
         return ["System is statically indeterminate"];
     }
-    for(let joint of Object.values(joints)) {
-        if(!joint.fixed) continue;
+    for(let joint of <JointInfo[]>Object.values(joints)) {
+        if(!joint.data.fixed) continue;
         let sumForces = SumForces(joint, analytical).forceIn;
-        joint.force = ScaleVector(sumForces, -analyticalMult);
+        joint.externalForce = ScaleVector(sumForces, -analyticalMult);
     }
     return [];
 }
@@ -197,9 +189,9 @@ function GetBucklingData(allMembers:MemberInfo[], mult:number) {
     for(let member of allMembers) {
         if(member.tension*mult > 0) continue;
 
-        const area = GetEffectiveArea(member.beamType, member.beamCount);
+        const area = GetEffectiveArea(member.beamType, member.data.beamCount);
         const stress = Math.abs(member.tension/area);
-        const buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.beamCount]);
+        const buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.data.beamCount]);
 
         member.fails = Math.abs(stress*mult) > buckleStress;
         member.failsAtLoad = buckleStress/stress;
@@ -211,12 +203,8 @@ function GetTensionData(allMembers:MemberInfo[], mult:number) {
     for(let member of allMembers) {
         if(member.tension*mult < 0) continue;
 
-        const area = GetEffectiveArea(member.beamType, member.beamCount);
+        const area = GetEffectiveArea(member.beamType, member.data.beamCount);
         const stress = Math.abs(member.tension/area);
-        if(member.name == "d") {
-            console.log(member.tension);
-            console.log(stress);
-        }
 
         member.fails = Math.abs(stress*mult)>TENSILE_STRENGTH;
 
@@ -228,7 +216,7 @@ function GetTensionData(allMembers:MemberInfo[], mult:number) {
 function MemberMass(allMembers:MemberInfo[]) {
     let total = 0;
     for(let member of allMembers) {
-        total += member.beamType.massPerLength * member.length * member.beamCount;
+        total += member.beamType.massPerLength * member.length * member.data.beamCount;
     }
     return total;
 }
@@ -248,20 +236,16 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     let allMembers:MemberInfo[] = [];
 
     for(let joint of joints) {
-        if(joint.id in allJoints) {
+        if(joint.data.id in allJoints) {
             results.errors.push("Same joint added twice");
         }
-        allJoints[joint.id] = {
-            id: joint.id,
-            name: joint.name,
-
-            fixed: joint.fixed,
-            force: joint.force,
-            position: joint.position,
+        allJoints[joint.data.id] = {
+            data: joint.data,
+            externalForce: [joint.data.force[0], joint.data.force[1]],
             membersIn: [],
             membersOut: [],
         };
-        if(Magnitude(joint.force) != 0) forcesCount++;
+        if(Magnitude(joint.data.force) != 0) forcesCount++;
     }
 
     switch(forcesCount) {
@@ -269,8 +253,8 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             results.errors.push("No forces found, cannot perform analysis");
             break;
         case 1:
-            const forceObj = Object.values(allJoints).filter((obj)=>{return Magnitude(obj.force) != 0;})[0];
-            results.analyticalMult = Magnitude(forceObj.force);
+            const forceObj = <JointInfo>Object.values(allJoints).filter((obj)=>{return Magnitude(obj.data.force) != 0;})[0];
+            results.analyticalMult = Magnitude(forceObj.data.force);
             results.analytical = true;
             break;
         default:
@@ -278,14 +262,14 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     }
 
     for(let member of members) {
-        const startPos = allJoints[member.start].position;
-        const endPos = allJoints[member.end].position;
+        const startPos = allJoints[member.data.startId].data.position;
+        const endPos = allJoints[member.data.endId].data.position;
         const direction = SubVectors(endPos, startPos)
         const directionNorm = Normalize(direction);
 
         const memberInfo:MemberInfo = {
-            name: member.name,
-            beamCount: member.double?2:1,
+            data: member.data,
+
             tensionKnown: false,
             failsAtLocal: 0,
             failsAtLoad: 0,
@@ -295,14 +279,11 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             stress:0,
             direction: directionNorm,
 
-            startId: member.start,
-            endId: member.end,
-
             length: Magnitude(direction),
-            beamType: BEAMS[member.type],
+            beamType: BEAMS[member.data.beamType],
         };
-        allJoints[member.start].membersOut.push(memberInfo);
-        allJoints[member.end].membersIn.push(memberInfo);
+        allJoints[member.data.startId].membersOut.push(memberInfo);
+        allJoints[member.data.endId].membersIn.push(memberInfo);
         allMembers.push(memberInfo);
     }
     results.joints = allJoints;
