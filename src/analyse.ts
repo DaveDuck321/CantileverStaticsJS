@@ -13,7 +13,7 @@ export interface SimulationOut {
     analyticalMult: number;
 }
 
-interface MemberInfo {
+export interface MemberInfo {
     data: MemberData,
 
     tensionKnown: boolean,

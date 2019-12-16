@@ -1,6 +1,6 @@
 import { JointInput, MemberInput, AddCell } from "./input";
 import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize, Round} from "./math_util";
-import { SimulationOut, JointInfo } from "./analyse";
+import { SimulationOut, JointInfo, MemberInfo } from "./analyse";
 
 function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
     let [rangeX, rangeY] = [max[0] - min[0], max[1] - min[1]];
@@ -12,6 +12,28 @@ function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
         const result = LinMultVectors(SubVectors(vec, min), scale);
         return [result[0], dimsPx[1] - result[1]];
     }
+}
+
+function DrawMember(context:CanvasRenderingContext2D, member:MemberInfo, startPos:vec2, endPos:vec2, maxTension:number) {
+    context.strokeStyle = `rgb(${Math.abs(member.tension/maxTension * 255)}, 0, 0)`;
+    context.lineWidth = member.beamType.id + 1;
+    context.beginPath();
+    context.moveTo(startPos[0], startPos[1]);
+    context.lineTo(endPos[0], endPos[1]);
+    context.stroke();
+
+    if(member.data.beamCount==1) return;
+
+    context.setLineDash([5, 2]);
+    context.strokeStyle = `rgb(0, 0, 0)`;
+    context.lineWidth = 1;
+    
+    context.beginPath();
+    context.moveTo(startPos[0], startPos[1]);
+    context.lineTo(endPos[0], endPos[1]);
+    context.stroke();
+    
+    context.setLineDash([]);
 }
 
 export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results:SimulationOut) {
@@ -50,14 +72,9 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     for(let member of results.members) {
         const tension = member.tension*results.analyticalMult;
         context.fillStyle = 'white';
-        context.strokeStyle = `rgb(${Math.abs(member.tension/maxTension * 255)}, 0, 0)`;
-        context.lineWidth = member.beamType.id + 1;
         const startPos = scale(results.joints[member.data.startId].data.position);
         const endPos = scale(results.joints[member.data.endId].data.position);
-        context.beginPath();
-        context.moveTo(startPos[0], startPos[1]);
-        context.lineTo(endPos[0], endPos[1]);
-        context.stroke();
+        DrawMember(context, member, startPos, endPos, maxTension);
 
         context.fillStyle = 'black';
         const rowClasses = member.fails?["error_out"]:[tension > 0?"tension_out":"compression_out"];
