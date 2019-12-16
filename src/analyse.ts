@@ -44,7 +44,6 @@ interface JointsObject {
 }
 
 interface BuckleGraph {
-    scale:number,
     range:vec2,
     coefficients:number[],
 }
@@ -69,28 +68,23 @@ export const BEAMS:Beam[] = [
 ];
 
 const BUCKLE_A:BuckleGraph = {
-    scale: 1.938,
-    range: [12.2, 116.3],
+    range: [6.164, 59.8],
     coefficients: [
-        232.506,
-        0,
-        -0.170192,
-        0.003336,
-        -0.0000254,
-        7.014e-8,
+        262.049,
+        -7.44737,
+        -0.0381352,
+        0.00328752,
+        -0.00002839,
     ],
 };
 
 const BUCKLE_B:BuckleGraph = {
-    scale: 1.938,
-    range: [12.2, 116.3],
+    range: [9.88, 59.88],
     coefficients: [
-        232.506,
-        0,
-        -0.170192,
+        267.832792683,
+        -5.41701346492,
+        0.00764445890144,
         0.003336,
-        -0.0000254,
-        7.014e-8,
     ],
 };
 
@@ -102,7 +96,7 @@ export function GetEffectiveArea(beam: Beam, beamCount: number) {
 
 function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
     const lengthPerB = member.length/member.beamType.size;
-    let graphX = Math.min(Math.max(lengthPerB*type.scale, type.range[0]), type.range[1]);
+    let graphX = Math.min(Math.max(lengthPerB, type.range[0]), type.range[1]);
     let stress = 0;
     for(let i=0; i<type.coefficients.length; i++) {
         stress += type.coefficients[i] * Math.pow(graphX, i);
@@ -191,7 +185,7 @@ function GetBucklingData(allMembers:MemberInfo[], mult:number) {
 
         const area = GetEffectiveArea(member.beamType, member.data.beamCount);
         const stress = Math.abs(member.tension/area);
-        const buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.data.beamCount]);
+        const buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.data.beamCount-1]);
 
         member.fails = Math.abs(stress*mult) > buckleStress;
         member.failsAtLoad = buckleStress/stress;

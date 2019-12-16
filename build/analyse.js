@@ -12,27 +12,22 @@ define(["require", "exports", "./math_util"], function (require, exports, math_u
         { id: 5, size: 19, thickness: 1.1, massPerLength: 0.328 },
     ];
     var BUCKLE_A = {
-        scale: 1.938,
-        range: [12.2, 116.3],
+        range: [6.164, 59.8],
         coefficients: [
-            232.506,
-            0,
-            -0.170192,
-            0.003336,
-            -0.0000254,
-            7.014e-8,
+            262.049,
+            -7.44737,
+            -0.0381352,
+            0.00328752,
+            -0.00002839,
         ],
     };
     var BUCKLE_B = {
-        scale: 1.938,
-        range: [12.2, 116.3],
+        range: [9.88, 59.88],
         coefficients: [
-            232.506,
-            0,
-            -0.170192,
+            267.832792683,
+            -5.41701346492,
+            0.00764445890144,
             0.003336,
-            -0.0000254,
-            7.014e-8,
         ],
     };
     var BUCKLE_GRAPHS = [BUCKLE_A, BUCKLE_B];
@@ -43,7 +38,7 @@ define(["require", "exports", "./math_util"], function (require, exports, math_u
     function GetBuckleStress(member, type) {
         if (type === void 0) { type = BUCKLE_A; }
         var lengthPerB = member.length / member.beamType.size;
-        var graphX = Math.min(Math.max(lengthPerB * type.scale, type.range[0]), type.range[1]);
+        var graphX = Math.min(Math.max(lengthPerB, type.range[0]), type.range[1]);
         var stress = 0;
         for (var i = 0; i < type.coefficients.length; i++) {
             stress += type.coefficients[i] * Math.pow(graphX, i);
@@ -132,7 +127,7 @@ define(["require", "exports", "./math_util"], function (require, exports, math_u
                 continue;
             var area = GetEffectiveArea(member.beamType, member.data.beamCount);
             var stress = Math.abs(member.tension / area);
-            var buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.data.beamCount]);
+            var buckleStress = GetBuckleStress(member, BUCKLE_GRAPHS[member.data.beamCount - 1]);
             member.fails = Math.abs(stress * mult) > buckleStress;
             member.failsAtLoad = buckleStress / stress;
             member.failsAtLocal = buckleStress * area;
