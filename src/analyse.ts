@@ -219,7 +219,7 @@ function MemberMass(allMembers:MemberInfo[]) {
     return total;
 }
 
-export function RunSimulation(joints:JointInput[], members:MemberInput[]):SimulationOut {
+export function RunSimulation(joints:JointData[], members:MemberData[]):SimulationOut {
     let results:SimulationOut = {
         members:[],
         joints:{},
@@ -234,16 +234,16 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     let allMembers:MemberInfo[] = [];
 
     for(let joint of joints) {
-        if(joint.data.id in allJoints) {
+        if(joint.id in allJoints) {
             results.errors.push("Same joint added twice");
         }
-        allJoints[joint.data.id] = {
-            data: joint.data,
-            externalForce: [joint.data.force[0], joint.data.force[1]],
+        allJoints[joint.id] = {
+            data: joint,
+            externalForce: [joint.force[0], joint.force[1]],
             membersIn: [],
             membersOut: [],
         };
-        if(Magnitude(joint.data.force) != 0) forcesCount++;
+        if(Magnitude(joint.force) != 0) forcesCount++;
     }
 
     switch(forcesCount) {
@@ -260,13 +260,13 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
     }
 
     for(let member of members) {
-        const startPos = allJoints[member.data.startId].data.position;
-        const endPos = allJoints[member.data.endId].data.position;
+        const startPos = allJoints[member.startId].data.position;
+        const endPos = allJoints[member.endId].data.position;
         const direction = SubVectors(endPos, startPos)
         const directionNorm = Normalize(direction);
 
         const memberInfo:MemberInfo = {
-            data: member.data,
+            data: member,
 
             tensionKnown: false,
             failsAtLocal: 0,
@@ -278,10 +278,10 @@ export function RunSimulation(joints:JointInput[], members:MemberInput[]):Simula
             direction: directionNorm,
 
             length: Magnitude(direction),
-            beamType: BEAMS[member.data.beamType],
+            beamType: BEAMS[member.beamType],
         };
-        allJoints[member.data.startId].membersOut.push(memberInfo);
-        allJoints[member.data.endId].membersIn.push(memberInfo);
+        allJoints[member.startId].membersOut.push(memberInfo);
+        allJoints[member.endId].membersIn.push(memberInfo);
         allMembers.push(memberInfo);
     }
     results.joints = allJoints;

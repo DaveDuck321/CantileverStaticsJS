@@ -354,7 +354,7 @@ function DrawChanges() {
     memberInputs = memberInputs.filter(member => member.alive);
     jointInputs = jointInputs.filter(joint => joint.alive);
 
-    const results = RunSimulation(jointInputs, memberInputs);
+    const results = RunSimulation(jointInputs.map(joint => joint.data), memberInputs.map(member => member.data));
     DrawScene(context, [canvas.width, canvas.height], results);
 }
 
