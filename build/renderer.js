@@ -55,8 +55,8 @@ define(["require", "exports", "./input", "./math_util"], function (require, expo
         var headingRow = document.createElement('TR');
         input_1.AddCell(headingRow, "Member");
         input_1.AddCell(headingRow, "Type of load");
-        input_1.AddCell(headingRow, "Tension");
-        input_1.AddCell(headingRow, "Tension before failure");
+        input_1.AddCell(headingRow, "Internal  force");
+        input_1.AddCell(headingRow, "Force before failure");
         input_1.AddCell(headingRow, "Load before failure");
         input_1.AddCell(headingRow, "Fails under current load");
         table.appendChild(headingRow);

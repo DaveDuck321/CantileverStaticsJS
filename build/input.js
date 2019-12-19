@@ -9,6 +9,7 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
         function MemberInput(membersIn, name, start, end, type) {
             var _this = this;
             if (type === void 0) { type = 0; }
+            this.alive = true;
             this.data = {
                 id: ++memberCount,
                 name: name,
@@ -20,6 +21,9 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.memberSpan = document.createElement("DIV");
             this.nameInput = document.createElement("INPUT");
             this.doubleInput = document.createElement("INPUT");
+            this.removeInput = document.createElement("INPUT");
+            this.removeInput.type = "button";
+            this.removeInput.value = "Remove";
             this.doubleInput.type = "checkbox";
             this.nameInput.onchange = function () { _this.updateName(_this); };
             this.doubleInput.onchange = function () { _this.updateDouble(_this); };
@@ -33,6 +37,7 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.startSelectElement.onchange = function () { _this.updateStart(_this); };
             this.endSelectElement.onchange = function () { _this.updateEnd(_this); };
             this.typeSelectElement.onchange = function () { _this.updateType(_this); };
+            this.removeInput.onclick = function () { _this.destroy(_this); };
             this.memberSpan.append("Name: ");
             this.memberSpan.appendChild(this.nameInput);
             this.memberSpan.append(" Starts at: ");
@@ -43,6 +48,7 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.memberSpan.appendChild(this.typeSelectElement);
             this.memberSpan.append(" Double Beam: ");
             this.memberSpan.appendChild(this.doubleInput);
+            this.memberSpan.appendChild(this.removeInput);
             membersIn.appendChild(this.memberSpan);
             this.updateAllOptions();
             this.matchInternalState();
@@ -53,6 +59,11 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.endSelectElement.value = "" + this.data.endId;
             this.typeSelectElement.value = "" + this.data.beamType;
             this.doubleInput.checked = this.data.beamCount > 1;
+        };
+        MemberInput.prototype.destroy = function (obj) {
+            obj.alive = false;
+            obj.memberSpan.remove();
+            DrawChanges();
         };
         MemberInput.prototype.updateDouble = function (obj) {
             obj.data.beamCount = obj.doubleInput.checked ? 2 : 1;
@@ -100,6 +111,7 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             if (position === void 0) { position = [0, 0]; }
             if (force === void 0) { force = 0; }
             if (fixed === void 0) { fixed = false; }
+            this.alive = true;
             if (typeof force === "number") {
                 force = [0, force];
             }
@@ -116,11 +128,15 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.positionInput = document.createElement("INPUT");
             this.forceInput = document.createElement("INPUT");
             this.fixedInput = document.createElement("INPUT");
+            this.removeInput = document.createElement("INPUT");
+            this.removeInput.type = "button";
+            this.removeInput.value = "Remove";
             this.fixedInput.type = "checkbox";
             this.nameInput.onchange = function (ev) { _this.updateName(ev, _this); };
             this.positionInput.onchange = function (ev) { _this.updatePosition(ev, _this); };
             this.forceInput.onchange = function (ev) { _this.updateForce(ev, _this); };
             this.fixedInput.onchange = function (ev) { return (_this.updateFixed(ev, _this)); };
+            this.removeInput.onclick = function () { _this.destroy(_this); };
             this.jointSpan.append("Name: ");
             this.jointSpan.appendChild(this.nameInput);
             this.jointSpan.append(" Position (x, y) in mm: ");
@@ -129,6 +145,7 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             this.jointSpan.appendChild(this.forceInput);
             this.jointSpan.append(" Fixed: ");
             this.jointSpan.appendChild(this.fixedInput);
+            this.jointSpan.appendChild(this.removeInput);
             jointsIn.appendChild(this.jointSpan);
             this.matchInternalState();
         }
@@ -143,6 +160,15 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
             else {
                 this.forceInput.value = state.force[0] + ", " + state.force[1];
             }
+        };
+        JointInput.prototype.destroy = function (obj) {
+            if (!canDestroyJoint(obj.data.id)) {
+                alert("Cannot remove joint, there are connecting members!");
+                return;
+            }
+            obj.alive = false;
+            obj.jointSpan.remove();
+            DrawChanges();
         };
         JointInput.prototype.updateName = function (ev, obj) {
             var input = ev.srcElement;
@@ -190,6 +216,15 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
         return JointInput;
     }());
     exports.JointInput = JointInput;
+    function canDestroyJoint(id) {
+        for (var _i = 0, memberInputs_1 = memberInputs; _i < memberInputs_1.length; _i++) {
+            var member = memberInputs_1[_i];
+            if (member.data.startId == id || member.data.endId == id) {
+                return false;
+            }
+        }
+        return true;
+    }
     function canUpdateName(id, newName) {
         for (var _i = 0, jointInputs_2 = jointInputs; _i < jointInputs_2.length; _i++) {
             var joint = jointInputs_2[_i];
@@ -201,21 +236,21 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
         return true;
     }
     function refeshSelectInputs() {
-        for (var _i = 0, memberInputs_1 = memberInputs; _i < memberInputs_1.length; _i++) {
-            var member = memberInputs_1[_i];
+        for (var _i = 0, memberInputs_2 = memberInputs; _i < memberInputs_2.length; _i++) {
+            var member = memberInputs_2[_i];
             member.updateAllOptions();
         }
         return true;
     }
     function addNewJoint() {
         var jointsIn = document.getElementById("joints_in");
-        jointInputs.push(new JointInput(jointsIn, "Joint " + jointCount));
+        jointInputs.push(new JointInput(jointsIn, "" + jointCount));
         refeshSelectInputs();
         DrawChanges();
     }
     function addNewMember() {
         var membersIn = document.getElementById("members_in");
-        memberInputs.push(new MemberInput(membersIn, "Member " + memberCount, jointInputs[0].data.id, jointInputs[1].data.id));
+        memberInputs.push(new MemberInput(membersIn, "m" + memberCount, jointInputs[0].data.id, jointInputs[1].data.id));
         DrawChanges();
     }
     function initialCantilever() {
@@ -243,6 +278,8 @@ define(["require", "exports", "./renderer", "./math_util", "./analyse"], functio
         console.log("Updated");
         var canvas = document.getElementById("canvas_out");
         var context = canvas.getContext('2d');
+        memberInputs = memberInputs.filter(function (member) { return member.alive; });
+        jointInputs = jointInputs.filter(function (joint) { return joint.alive; });
         var results = analyse_1.RunSimulation(jointInputs, memberInputs);
         renderer_1.DrawScene(context, [canvas.width, canvas.height], results);
     }

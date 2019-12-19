@@ -164,8 +164,12 @@ function SolveNextJoint(joints: JointsObject, analytical:boolean, analyticalMult
         }
         if(knownCount > 0 && unknownCount > 0 && unknownCount < 3) {
             //Can solve via static analysis
-            SolveFreeJoint(joint, analytical);
-            return SolveNextJoint(joints, analytical, analyticalMult);
+            try {
+                SolveFreeJoint(joint, analytical);
+                return SolveNextJoint(joints, analytical, analyticalMult);
+            } catch(e) {
+                return ["Could not complete analysis -- system could be statically indeterminate"];
+            }
         }
     }
     if(unknownMember) {

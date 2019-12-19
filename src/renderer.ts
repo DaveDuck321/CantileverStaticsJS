@@ -63,8 +63,8 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     let headingRow = document.createElement('TR');
     AddCell(headingRow, "Member");
     AddCell(headingRow, "Type of load");
-    AddCell(headingRow, "Tension");
-    AddCell(headingRow, "Tension before failure");
+    AddCell(headingRow, "Internal  force");
+    AddCell(headingRow, "Force before failure");
     AddCell(headingRow, "Load before failure");
     AddCell(headingRow, "Fails under current load");
     table.appendChild(headingRow);

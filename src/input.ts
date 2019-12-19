@@ -1,6 +1,6 @@
 import { DrawScene } from "./renderer";
 import {vec2, Magnitude, Round} from "./math_util";
-import { RunSimulation, BEAMS, GetEffectiveArea } from "./analyse";
+import { RunSimulation, BEAMS, GetEffectiveArea, JointInfo } from "./analyse";
 import { MemberData, JointData } from "./definition_data";
 
 let jointCount = 0;
@@ -10,6 +10,7 @@ let memberInputs:MemberInput[] = [];
 
 export class MemberInput {
     data: MemberData;
+    alive: boolean;
 
     memberSpan: HTMLElement;
     nameInput: HTMLInputElement;
@@ -17,21 +18,26 @@ export class MemberInput {
     startSelectElement: HTMLSelectElement;
     endSelectElement: HTMLSelectElement;
     doubleInput: HTMLInputElement;
+    removeInput: HTMLInputElement;
 
     constructor(membersIn: HTMLElement, name:string, start:number, end:number, type:number=0) {
+        this.alive = true;
         this.data = {
             id: ++memberCount,
             name: name,
             startId: start,
             endId: end,
             beamType: type,
-            beamCount:1,
+            beamCount: 1,
         };
 
         this.memberSpan = <HTMLElement>document.createElement("DIV");
         this.nameInput = <HTMLInputElement>document.createElement("INPUT");
         this.doubleInput = <HTMLInputElement>document.createElement("INPUT");
-        this.doubleInput.type = "checkbox"
+        this.removeInput = <HTMLInputElement>document.createElement("INPUT");
+        this.removeInput.type = "button";
+        this.removeInput.value = "Remove";
+        this.doubleInput.type = "checkbox";
 
         this.nameInput.onchange = ()=>{this.updateName(this)};
         this.doubleInput.onchange = ()=>{this.updateDouble(this)};
@@ -47,6 +53,7 @@ export class MemberInput {
         this.startSelectElement.onchange = ()=>{this.updateStart(this)};
         this.endSelectElement.onchange = ()=>{this.updateEnd(this)};
         this.typeSelectElement.onchange = ()=>{this.updateType(this)};
+        this.removeInput.onclick = ()=>{this.destroy(this)};
 
         this.memberSpan.append("Name: ");
         this.memberSpan.appendChild(this.nameInput);
@@ -58,6 +65,7 @@ export class MemberInput {
         this.memberSpan.appendChild(this.typeSelectElement);
         this.memberSpan.append(" Double Beam: ");
         this.memberSpan.appendChild(this.doubleInput);
+        this.memberSpan.appendChild(this.removeInput);
 
         membersIn.appendChild(this.memberSpan);
 
@@ -70,6 +78,11 @@ export class MemberInput {
         this.endSelectElement.value = ""+this.data.endId;
         this.typeSelectElement.value = ""+this.data.beamType;
         this.doubleInput.checked = this.data.beamCount>1;
+    }
+    destroy(obj:MemberInput) {
+        obj.alive = false;
+        obj.memberSpan.remove();
+        DrawChanges();
     }
     updateDouble(obj:MemberInput) {
         obj.data.beamCount = obj.doubleInput.checked?2:1;
@@ -89,7 +102,6 @@ export class MemberInput {
         obj.data.beamType = parseInt(selected.value);
         DrawChanges();
     }
-
     updateAllOptions() {
         this.updateOptions(this.startSelectElement, this.data.startId);
         this.updateOptions(this.endSelectElement, this.data.endId);
@@ -112,14 +124,17 @@ export class MemberInput {
 
 export class JointInput {
     data: JointData;
+    alive: boolean;
 
     jointSpan: HTMLElement;
     nameInput: HTMLInputElement;
     positionInput: HTMLInputElement;
     fixedInput: HTMLInputElement;
     forceInput: HTMLInputElement;
+    removeInput: HTMLInputElement;
 
     constructor(jointsIn: HTMLElement, name: string, position:vec2 = [0, 0], force:vec2|number = 0, fixed:boolean = false) {
+        this.alive = true;
         if(typeof force === "number") {
             force = [0, force];
         }
@@ -138,12 +153,16 @@ export class JointInput {
         this.positionInput = <HTMLInputElement>document.createElement("INPUT");
         this.forceInput = <HTMLInputElement>document.createElement("INPUT");
         this.fixedInput = <HTMLInputElement>document.createElement("INPUT");
+        this.removeInput = <HTMLInputElement>document.createElement("INPUT");
+        this.removeInput.type = "button";
+        this.removeInput.value = "Remove";
         this.fixedInput.type = "checkbox";
         
         this.nameInput.onchange = (ev)=>{this.updateName(ev, this)};
         this.positionInput.onchange = (ev)=>{this.updatePosition(ev, this)};
         this.forceInput.onchange = (ev)=>{this.updateForce(ev, this)};
         this.fixedInput.onchange = (ev)=>(this.updateFixed(ev, this));
+        this.removeInput.onclick = ()=>{this.destroy(this)};
 
         this.jointSpan.append("Name: ");
         this.jointSpan.appendChild(this.nameInput);
@@ -153,6 +172,7 @@ export class JointInput {
         this.jointSpan.appendChild(this.forceInput);
         this.jointSpan.append(" Fixed: ");
         this.jointSpan.appendChild(this.fixedInput);
+        this.jointSpan.appendChild(this.removeInput);
 
         jointsIn.appendChild(this.jointSpan);
 
@@ -168,6 +188,15 @@ export class JointInput {
         } else {
             this.forceInput.value = `${state.force[0]}, ${state.force[1]}`;
         }
+    }
+    destroy(obj:JointInput) {
+        if(!canDestroyJoint(obj.data.id)) {
+            alert("Cannot remove joint, there are connecting members!");
+            return;
+        }
+        obj.alive = false;
+        obj.jointSpan.remove();
+        DrawChanges();
     }
     updateName(ev: Event, obj:JointInput):void {
         const input = <HTMLInputElement>ev.srcElement;
@@ -211,6 +240,15 @@ export class JointInput {
     }
 }
 
+function canDestroyJoint(id:number):boolean {
+    for(let member of memberInputs) {
+        if(member.data.startId == id || member.data.endId == id) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function canUpdateName(id:number, newName:string):boolean {
     for(let joint of jointInputs) {
         if(id === joint.data.id) continue;
@@ -228,14 +266,14 @@ function refeshSelectInputs() {
 
 function addNewJoint() {
     const jointsIn = <HTMLElement>document.getElementById("joints_in");
-    jointInputs.push(new JointInput(jointsIn, `Joint ${jointCount}`));
+    jointInputs.push(new JointInput(jointsIn, `${jointCount}`));
     refeshSelectInputs();
     DrawChanges();
 }
 
 function addNewMember() {
     const membersIn = <HTMLElement>document.getElementById("members_in");
-    memberInputs.push(new MemberInput(membersIn, `Member ${memberCount}`, jointInputs[0].data.id, jointInputs[1].data.id));
+    memberInputs.push(new MemberInput(membersIn, `m${memberCount}`, jointInputs[0].data.id, jointInputs[1].data.id));
     DrawChanges();
 }
 
@@ -270,6 +308,10 @@ function DrawChanges() {
     console.log("Updated");
     const canvas = <HTMLCanvasElement>document.getElementById("canvas_out");
     const context = <CanvasRenderingContext2D>canvas.getContext('2d');
+
+    //Filter out dead members + joints
+    memberInputs = memberInputs.filter(member => member.alive);
+    jointInputs = jointInputs.filter(joint => joint.alive);
 
     const results = RunSimulation(jointInputs, memberInputs);
     DrawScene(context, [canvas.width, canvas.height], results);

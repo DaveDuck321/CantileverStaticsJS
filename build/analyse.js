@@ -104,8 +104,13 @@ define(["require", "exports", "./math_util"], function (require, exports, math_u
                 unknownMember = true;
             }
             if (knownCount > 0 && unknownCount > 0 && unknownCount < 3) {
-                SolveFreeJoint(joint, analytical);
-                return SolveNextJoint(joints, analytical, analyticalMult);
+                try {
+                    SolveFreeJoint(joint, analytical);
+                    return SolveNextJoint(joints, analytical, analyticalMult);
+                }
+                catch (e) {
+                    return ["Could not complete analysis -- system could be statically indeterminate"];
+                }
             }
         }
         if (unknownMember) {
