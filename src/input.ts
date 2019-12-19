@@ -1,7 +1,7 @@
 import { DrawScene } from "./renderer";
 import {vec2, Magnitude, Round} from "./math_util";
 import { RunSimulation, BEAMS, GetEffectiveArea, JointInfo } from "./analyse";
-import { MemberData, JointData } from "./definition_data";
+import { MemberData, JointData, StructureData } from "./definition_data";
 
 let jointCount = 0;
 let memberCount = 0;
@@ -277,6 +277,47 @@ function addNewMember() {
     DrawChanges();
 }
 
+function loadFromData(data:StructureData) {
+    jointCount = 0;
+    memberCount = 0;
+    memberInputs = [];
+    jointInputs = [];
+
+    const membersIn = <HTMLElement>document.getElementById("members_in");
+    const jointsIn = <HTMLElement>document.getElementById("joints_in");
+    membersIn.innerHTML = "";
+    jointsIn.innerHTML = "";
+    
+    for(let jointData of data.joints) {
+        let joint = new JointInput(jointsIn, jointData.name);
+        joint.data = jointData;
+        joint.matchInternalState();
+        jointInputs.push(joint);
+
+        jointCount = Math.max(jointData.id+1, jointCount);
+    }
+    for(let memberData of data.members) {
+        let member = new MemberInput(membersIn, memberData.name, 0, 1);
+        member.data = memberData;
+        member.matchInternalState();
+        memberInputs.push(member);
+
+        memberCount = Math.max(memberData.id+1, memberCount);
+    }
+    refeshSelectInputs();
+    DrawChanges();
+}
+
+function loadFromJsonInput() {
+    const jsonInput = <HTMLTextAreaElement>document.getElementById("structure_data");
+    try {
+        let saveData:StructureData = JSON.parse(<string>jsonInput.value);
+        loadFromData(saveData);
+    } catch(e) {
+        alert("Could not load from json!");
+    }
+}
+
 function initialCantilever() {
     const jointsIn = <HTMLElement>document.getElementById("joints_in");
     const membersIn = <HTMLElement>document.getElementById("members_in");
@@ -357,8 +398,10 @@ window.onload = ()=>{
     const addMemberBtn = <HTMLButtonElement>document.getElementById("new_member");
     const addJointBtn = <HTMLButtonElement>document.getElementById("new_joint");
     const optimiseBtn = <HTMLButtonElement>document.getElementById("optimise");
+    const loadJSON = <HTMLButtonElement>document.getElementById("JSON_load");
     addMemberBtn.onclick = addNewMember;
     addJointBtn.onclick = addNewJoint;
+    loadJSON.onclick = loadFromJsonInput;
 
     initialCantilever();
     DrawChanges();

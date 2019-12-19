@@ -9,7 +9,9 @@
         <table><tr>
             <td>
                 <h3>Visualisation</h3>
-                <canvas id="canvas_out" width=500 height=500></canvas>
+                <canvas id="canvas_out" width=500 height=500 ></canvas>
+                <h3>JSON -- for saving or loading configuration</h3>
+                <textarea id="structure_data" rows=5 cols=50></textarea>
             </td>
             <td>
                 <h3>Member types</h3>
@@ -19,20 +21,22 @@
                 <p>Pop-rivet hole Diameter: 3.2 mm</p>
             </td>
         </tr></table>
+        <button id="JSON_load">Load from JSON</button>
         <button id="optimise">Optimise members</button>
         <h3>Analysis results</h3>
         <span id="output"></span>
 
+        <br/>
+        <h3>Joint input</h3>
         <div id="joints_in">
-            <h3>Joint input</h3>
+            
         </div><br/>
         <button id="new_joint">Add new joint</button>
-
+        <h3>Member input</h3>
         <div id="members_in">
-            <h3>Member input</h3>
+            
         </div><br/>
-        <button id="new_member">Add new member</button></br>
-        </tr></table>
+        <button id="new_member">Add new member</button><br/><br/>
     </body>
     <style>
         .data_table {

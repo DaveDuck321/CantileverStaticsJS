@@ -20,3 +20,8 @@ export interface JointData {
 
     fixed: boolean,
 }
+
+export interface StructureData {
+    joints:JointData[],
+    members:MemberData[],
+}

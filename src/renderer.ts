@@ -1,6 +1,7 @@
 import { JointInput, MemberInput, AddCell } from "./input";
 import {SubVectors, AddVectors, LinMultVectors, ScaleVector, vec2, Magnitude, Normalize, Round} from "./math_util";
 import { SimulationOut, JointInfo, MemberInfo } from "./analyse";
+import { StructureData } from "./definition_data";
 
 function Scale2Viewport(min:vec2, max:vec2, dimsPx:vec2) {
     let [rangeX, rangeY] = [max[0] - min[0], max[1] - min[1]];
@@ -37,8 +38,13 @@ function DrawMember(context:CanvasRenderingContext2D, member:MemberInfo, startPo
 }
 
 export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results:SimulationOut) {
+    const jsonOutElement = <HTMLTextAreaElement>document.getElementById("structure_data");
     const outElement = <HTMLLIElement>document.getElementById("output");
     outElement.innerHTML = `Mass: ${Round(results.mass, 1)} g`;
+
+    let saveData:StructureData = {
+        joints:[], members:[]
+    };
 
     context.font = "12px Arial";
     context.fillStyle = 'white';
@@ -70,19 +76,22 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     table.appendChild(headingRow);
 
     for(let member of results.members) {
+        const memberData = member.data;
+        saveData.members.push(memberData);
+
         const tension = member.tension*results.analyticalMult;
         context.fillStyle = 'white';
-        const startPos = scale(results.joints[member.data.startId].data.position);
-        const endPos = scale(results.joints[member.data.endId].data.position);
+        const startPos = scale(results.joints[memberData.startId].data.position);
+        const endPos = scale(results.joints[memberData.endId].data.position);
         DrawMember(context, member, startPos, endPos, maxTension);
 
         context.fillStyle = 'black';
         const rowClasses = member.fails?["error_out"]:[tension > 0?"tension_out":"compression_out"];
         let centerPos = AddVectors(startPos, LinMultVectors(SubVectors(endPos, startPos), [0.5, 0.5]));
-        context.fillText(member.data.name, centerPos[0], centerPos[1]);
+        context.fillText(memberData.name, centerPos[0], centerPos[1]);
 
         let rowOut = document.createElement('TR');
-        AddCell(rowOut, member.data.name, "tab_header", ...rowClasses);
+        AddCell(rowOut, memberData.name, "tab_header", ...rowClasses);
         if(tension > 0) {
             AddCell(rowOut, "Tensive", ...rowClasses);
         } else {
@@ -103,6 +112,8 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
     context.font = "15px Arial";
     for(let joint of <JointInfo[]>Object.values(results.joints)) {
         const jointData = joint.data;
+        saveData.joints.push(jointData);
+
         context.fillStyle = 'white';
         const pos = scale(jointData.position);
         if(jointData.fixed) {
@@ -127,6 +138,7 @@ export function DrawScene(context:CanvasRenderingContext2D, dimsPx:vec2, results
         }
         context.fillText(jointData.name, pos[0], pos[1]);
     }
+    jsonOutElement.value = JSON.stringify(saveData);
     for(let error of results.errors) {
         let errorOut = document.createElement("DIV");
         errorOut.classList.add("error_out");
