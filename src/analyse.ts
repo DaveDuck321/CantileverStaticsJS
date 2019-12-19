@@ -1,6 +1,7 @@
 import { JointInput, MemberInput } from "./input";
 import { SubVectors, Normalize, Magnitude, vec2, ScaleVector, AddVectors } from "./math_util";
-import { MemberData, JointData } from "./definition_data";
+import { MemberData, JointData, Beam, BuckleGraph } from "./definition_data";
+import { BEAMS, BUCKLE_GRAPHS } from "./consts";
 
 export interface SimulationOut {
     members:MemberInfo[];
@@ -43,58 +44,14 @@ interface JointsObject {
     [key: number]: JointInfo
 }
 
-interface BuckleGraph {
-    range:vec2,
-    coefficients:number[],
-}
-
-interface Beam {
-    id: number,
-    size: number,
-    thickness: number,
-    massPerLength: number,
-}
-
 const TENSILE_STRENGTH = 260;
 const HOLE_D = 3.2;
-
-export const BEAMS:Beam[] = [
-    {id:0, size: 9.5, thickness: 0.7, massPerLength: 0.104},
-    {id:1, size: 12.5, thickness: 0.7, massPerLength: 0.137},
-    {id:2, size: 12.5, thickness: 0.9, massPerLength: 0.176},
-    {id:3, size: 16, thickness: 0.9, massPerLength: 0.226},
-    {id:4, size: 16, thickness: 1.1, massPerLength: 0.276},
-    {id:5, size: 19, thickness: 1.1, massPerLength: 0.328},
-];
-
-const BUCKLE_A:BuckleGraph = {
-    range: [6.164, 59.8],
-    coefficients: [
-        262.049,
-        -7.44737,
-        -0.0381352,
-        0.00328752,
-        -0.00002839,
-    ],
-};
-
-const BUCKLE_B:BuckleGraph = {
-    range: [9.88, 59.88],
-    coefficients: [
-        267.832792683,
-        -5.41701346492,
-        0.00764445890144,
-        0.003336,
-    ],
-};
-
-const BUCKLE_GRAPHS = [BUCKLE_A, BUCKLE_B];
 
 export function GetEffectiveArea(beam: Beam, beamCount: number) {
     return (3*beam.size/2 - HOLE_D) * beam.thickness * 0.9 * beamCount;
 }
 
-function GetBuckleStress(member:MemberInfo, type:BuckleGraph = BUCKLE_A):number {
+function GetBuckleStress(member:MemberInfo, type:BuckleGraph):number {
     const lengthPerB = member.length/member.beamType.size;
     let graphX = Math.min(Math.max(lengthPerB, type.range[0]), type.range[1]);
     let stress = 0;

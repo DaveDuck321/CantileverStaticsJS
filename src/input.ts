@@ -1,7 +1,9 @@
 import { DrawScene } from "./renderer";
 import {vec2, Magnitude, Round} from "./math_util";
-import { RunSimulation, BEAMS, GetEffectiveArea, JointInfo } from "./analyse";
+import { RunSimulation, GetEffectiveArea, JointInfo } from "./analyse";
+import { Optimise } from "./optimise";
 import { MemberData, JointData, StructureData } from "./definition_data";
+import { BEAMS } from "./consts";
 
 let jointCount = 0;
 let memberCount = 0;
@@ -318,6 +320,18 @@ function loadFromJsonInput() {
     }
 }
 
+function attemptOptimise() {
+    if(!confirm("Structure will be optimised for current load.\nAll input member configs will be overridden.")) {
+        return;
+    }
+    let result = Optimise(jointInputs.map(joint => joint.data), memberInputs.map(member => member.data));
+    if(!result.success) {
+        alert("Structure cannot support the current load");
+    }
+    loadFromData(result.result);
+    
+}
+
 function initialCantilever() {
     const jointsIn = <HTMLElement>document.getElementById("joints_in");
     const membersIn = <HTMLElement>document.getElementById("members_in");
@@ -401,6 +415,7 @@ window.onload = ()=>{
     const loadJSON = <HTMLButtonElement>document.getElementById("JSON_load");
     addMemberBtn.onclick = addNewMember;
     addJointBtn.onclick = addNewJoint;
+    optimiseBtn.onclick = attemptOptimise;
     loadJSON.onclick = loadFromJsonInput;
 
     initialCantilever();

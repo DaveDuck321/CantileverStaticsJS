@@ -25,3 +25,20 @@ export interface StructureData {
     joints:JointData[],
     members:MemberData[],
 }
+
+export interface BuckleGraph {
+    range:vec2,
+    coefficients:number[],
+}
+
+export interface Beam {
+    id: number,
+    size: number,
+    thickness: number,
+    massPerLength: number,
+}
+
+export interface Result<T> {
+    result: T,
+    success: boolean,
+}
